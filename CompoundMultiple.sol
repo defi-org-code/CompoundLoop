@@ -47,7 +47,7 @@ contract CompoundMultiple is Ownable, Exponential {
         return IERC20(CUSDC).balanceOf(address(this));
     }
 
-    function underlyingBalance(CUSDC)
+    function underlyingBalance()
         public
         view
         returns (uint)
@@ -148,8 +148,6 @@ contract CompoundMultiple is Ownable, Exponential {
             _amountIn = IERC20(usdc).balanceOf(address(this));
         }
         
-        uint decimals = 6;
-
         uint amountToBorrowMantissa;
         uint amountInCurr = _amountIn;
         while (amountInCurr >= minAmountIn) {
@@ -181,8 +179,6 @@ contract CompoundMultiple is Ownable, Exponential {
         
         (, uint collateralFactorMantissa) = ComptrollerInterface(UNITROLLER).markets(CUSDC);
         
-        uint decimals = 6;
-
         uint amountToRepayFirst = IERC20(usdc).balanceOf(address(this));
         uint borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
         while (borrowBalance > 0) {
