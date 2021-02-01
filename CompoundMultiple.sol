@@ -37,21 +37,22 @@ contract CompoundMultiple is Ownable, Exponential {
     using SafeERC20 for IERC20;
 
     address public constant UNITROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
+    address public constant CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
 
-    function cTokenBalance(address cToken)
+    function cTokenBalance()
         public
         view
         returns (uint)
     {
-        return IERC20(cToken).balanceOf(address(this));
+        return IERC20(CUSDC).balanceOf(address(this));
     }
 
-    function underlyingBalance(address cToken)
+    function underlyingBalance(CUSDC)
         public
         view
         returns (uint)
     {
-        address underlying = CErc20Interface(cToken).underlying();
+        address underlying = CErc20Interface(CUSDC).underlying();
         return IERC20(underlying).balanceOf(address(this));
     }
 
@@ -115,107 +116,92 @@ contract CompoundMultiple is Ownable, Exponential {
         }
     }
 
+    // function enterMarkets(address[] memory _arrayForEnterMarkets)
+    //     public
+    //     onlyOwner
+    // {
+    //     ComptrollerInterface(UNITROLLER).enterMarkets(_arrayForEnterMarkets);
+    // }
+
     // 3 typical cases:
     // minAmountIn = 15000$ (this goes for multiple iterations: mint, borrow, mint, borrow, ..., mint until the last mint was for a sum smaller than 15000$)
     // minAmountIn = amountIn (this goes for one iteration: mint, borrow, mint)
     // minAmountIn = uint(-1) (this goes for zero iterations: mint)
-    function mintMultiple(address cToken, uint amountIn, uint minAmountIn, uint _collateralFactor, uint _amountToBorrowNum, uint _amountToBorrowDenom) 
+    function mintMultiple(uint amountIn, uint minAmountIn, uint _amountToBorrowNum, uint _amountToBorrowDenom) 
         external
         onlyOwner
     {
-        (bool isListed, uint collateralFactor) = ComptrollerInterface(UNITROLLER).markets(cToken);
-        require(isListed, "cToken not listed");
-        require(collateralFactor == _collateralFactor, "unexpected collateral factor");
-
-        address underlying = CErc20Interface(cToken).underlying();
+        address usdc = CErc20Interface(CUSDC).underlying();
         // approve token for mint
-        if (IERC20(underlying).allowance(address(this), cToken) != uint(-1)) {
-            IERC20(underlying).approve(cToken, uint(-1));
+        if (IERC20(usdc).allowance(address(this), CUSDC) != uint(-1)) {
+            IERC20(usdc).approve(CUSDC, uint(-1));
         }
             
         // enable cToken as collateral
         address[] memory arrayForEnterMarkets = new address[](1);
-        arrayForEnterMarkets[0] = cToken;
+        arrayForEnterMarkets[0] = CUSDC;
         ComptrollerInterface(UNITROLLER).enterMarkets(arrayForEnterMarkets);
         
-        require(IERC20(underlying).balanceOf(address(this)) >= amountIn, "not enough tokens");
+        require(IERC20(usdc).balanceOf(address(this)) >= amountIn, "not enough tokens");
         uint _amountIn = amountIn;
         if (_amountIn == 0) {
-            _amountIn = IERC20(underlying).balanceOf(address(this));
+            _amountIn = IERC20(usdc).balanceOf(address(this));
         }
         
-        uint decimals;
-        if (IERC20Detailed(underlying).decimals() == 18) {
-            decimals = 18;
-        } else if (IERC20Detailed(underlying).decimals() == 6) {
-            decimals = 6;
-        } else {
-            require(false, "decimals must be 18 or 6");
-        }
+        uint decimals = 6;
+
         uint amountToBorrowMantissa;
         uint amountInCurr = _amountIn;
         while (amountInCurr >= minAmountIn) {
-            CErc20Interface(cToken).mint(amountInCurr);
-            (, amountToBorrowMantissa, ) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
-            uint amountToBorrow;
-            if (decimals == 18) {
-                amountToBorrow = amountToBorrowMantissa;
-            } else {
-                amountToBorrow = MantissaToUSDC(amountToBorrowMantissa);
-            }
+            CErc20Interface(CUSDC).mint(amountInCurr);
+            (, amountToBorrowMantissa, ) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this)); // 18 decimals
+            uint amountToBorrow = MantissaToUSDC(amountToBorrowMantissa); // 6 decimals TODO make sure that's actuall 6
+            
             // keep tokens aside
             amountToBorrow = amountToBorrow.mul(_amountToBorrowNum).div(_amountToBorrowDenom);
-            CErc20Interface(cToken).borrow(amountToBorrow);
-            amountInCurr = IERC20(underlying).balanceOf(address(this));
+
+            CErc20Interface(CUSDC).borrow(amountToBorrow);
+
+            amountInCurr = IERC20(usdc).balanceOf(address(this));
         }
-        CErc20Interface(cToken).mint(amountInCurr);
+        CErc20Interface(CUSDC).mint(amountInCurr);
     }
 
-    function redeemMultiple(address cToken)
+    function redeemMultiple()
         external
         onlyOwner
     {
-        require(IERC20(cToken).balanceOf(address(this)) > 0, "cToken balance = 0");
+        require(IERC20(CUSDC).balanceOf(address(this)) > 0, "cUSDC balance = 0");
         
-        address underlying = CErc20Interface(cToken).underlying();
+        address usdc = CErc20Interface(CUSDC).underlying();
         // approve USDC for repayBorrow
-        if (IERC20(underlying).allowance(address(this), cToken) != uint(-1)) {
-            IERC20(underlying).approve(cToken, uint(-1));
+        if (IERC20(usdc).allowance(address(this), CUSDC) != uint(-1)) {
+            IERC20(usdc).approve(CUSDC, uint(-1));
         }
         
-        (, uint collateralFactorMantissa) = ComptrollerInterface(UNITROLLER).markets(cToken);
+        (, uint collateralFactorMantissa) = ComptrollerInterface(UNITROLLER).markets(CUSDC);
         
-        uint decimals;
-        if (IERC20Detailed(underlying).decimals() == 18) {
-            decimals = 18;
-        } else if (IERC20Detailed(underlying).decimals() == 6) {
-            decimals = 6;
-        } else {
-            require(false, "decimals must be 18 or 6");
-        }
-        uint amountToRepayFirst = IERC20(underlying).balanceOf(address(this));
-        uint borrowBalance = CErc20Interface(cToken).borrowBalanceCurrent(address(this));
+        uint decimals = 6;
+
+        uint amountToRepayFirst = IERC20(usdc).balanceOf(address(this));
+        uint borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
         while (borrowBalance > 0) {
             (, uint accountLiquidityMantissa, ) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
             (, Exp memory amountToRedeemExp) = getExp(accountLiquidityMantissa, collateralFactorMantissa);
-            uint amountToRedeemMantissa = amountToRedeemExp.mantissa;
-            uint amountToRedeem;
-            if (decimals == 18) {
-                amountToRedeem = amountToRedeemMantissa;
-            } else {
-                amountToRedeem = MantissaToUSDC(amountToRedeemMantissa);
-            }
-            CErc20Interface(cToken).redeemUnderlying(amountToRedeem);
+            
+            uint amountToRedeem = MantissaToUSDC(amountToRedeemExp.mantissa);
+            
+            CErc20Interface(CUSDC).redeemUnderlying(amountToRedeem);
             if (amountToRedeem.add(amountToRepayFirst) > borrowBalance) {
-                CErc20Interface(cToken).repayBorrow(uint(-1));
+                CErc20Interface(CUSDC).repayBorrow(uint(-1));
             } else {
-                CErc20Interface(cToken).repayBorrow(amountToRedeem.add(amountToRepayFirst));
+                CErc20Interface(CUSDC).repayBorrow(amountToRedeem.add(amountToRepayFirst));
             }
             amountToRepayFirst = 0;
-            borrowBalance = CErc20Interface(cToken).borrowBalanceCurrent(address(this));
+            borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
         }
-        uint cTokenToRedeem = IERC20(cToken).balanceOf(address(this));
-        CErc20Interface(cToken).redeem(cTokenToRedeem);
+        uint cTokenToRedeem = IERC20(CUSDC).balanceOf(address(this));
+        CErc20Interface(CUSDC).redeem(cTokenToRedeem);
     }
     
     function MantissaToUSDC(uint amountMantissa) 
