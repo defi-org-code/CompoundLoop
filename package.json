@@ -1,0 +1,25 @@
+{
+  "name": "compoundloop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/defi-org-code/CompoundLoop.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/defi-org-code/CompoundLoop/issues"
+  },
+  "homepage": "https://github.com/defi-org-code/CompoundLoop#readme",
+  "devDependencies": {
+    "@openzeppelin/test-environment": "^0.1.9",
+    "@openzeppelin/test-helpers": "^0.5.10",
+    "ganache-core": "^2.13.2",
+    "truffle": "^5.1.64"
+  }
+}
