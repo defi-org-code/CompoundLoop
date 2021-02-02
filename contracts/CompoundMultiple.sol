@@ -89,7 +89,7 @@ contract CompoundMultiple is Ownable, Exponential {
     {
         return IERC20(ComptrollerInterface(UNITROLLER).getCompAddress()).balanceOf(address(this));
     }
-    
+
     function transferAsset(address asset_, address to_, uint256 amount_)
         public
         onlyOwner
