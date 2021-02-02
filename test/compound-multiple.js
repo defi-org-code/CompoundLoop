@@ -1,6 +1,5 @@
 const { accounts, contract } = require('@openzeppelin/test-environment');
 const { BN, time } = require('@openzeppelin/test-helpers');
-const [ owner, manager ] = accounts;
 
 const { expect } = require('chai');
 
@@ -19,13 +18,18 @@ const toUsd = x => new BN(x).div(new BN(1000000));
 
 const toComp = x => new BN(x).div(new BN(10).pow(new BN(18)));
 
+let curAccount = 0;
+const nextAccount = () => accounts[curAccount++];
+
 describe('CompoundMultiple', function () {
 
     it('enter, exit, claim', async function () {
+        const owner = nextAccount();
+
         const initialAmount = fromUsd(1000000);
         const minAmount = fromUsd(10000);
 
-        const compoundMultiple = await CompoundMultiple.new(manager, { from: owner });
+        const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
 
         const usdcToken = await ERC20.at(USDC_ADDR);
         const compToken = await ERC20.at(COMP_ADDR);
@@ -47,6 +51,13 @@ describe('CompoundMultiple', function () {
 
         await time.increase(7*24*60*60);
 
+        await compoundMultiple.claimAndTransferAllComp(owner, {from: owner});
+        expect(await compToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
+
+        const compBalance = await compToken.balanceOf(owner);
+        console.log(`owner COMP balance after claim: ${compBalance} COMP*1e18`);
+        expect(compBalance).to.bignumber.gte(new BN(400000000000000));
+
         res = await compoundMultiple.exitPosition({from: owner});
         console.log(`exit position: gas used - ${res.receipt.gasUsed}`);
 
@@ -63,23 +74,18 @@ describe('CompoundMultiple', function () {
         let usdcBalanceAfterWithdraw = await usdcToken.balanceOf(owner)
         console.log(`owner USDC balance after withdraw: ${toUsd(usdcBalanceAfterWithdraw)} USDC`);
         expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(initialAmount);
-
-        await compoundMultiple.claimAndTransferAllComp(owner, {from: owner});
-        expect(await compToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
-
-        const compBalance = await compToken.balanceOf(owner);
-        console.log(`owner COMP balance after claim: ${toComp(compBalance)} COMP`);
-        expect(compBalance).to.bignumber.gte(new BN(400000000000000));
     });
 
     it('enter, enter again with small amount, exit', async function () {
+        const owner = nextAccount();
+
         const initialAmount = fromUsd(1000000);
         const secondAmount = fromUsd(20000);
         const minAmount = fromUsd(10000);
 
         const totalAmount = initialAmount.add(secondAmount);
 
-        const compoundMultiple = await CompoundMultiple.new(manager, { from: owner });
+        const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
 
         const usdcToken = await ERC20.at(USDC_ADDR);
         const compToken = await ERC20.at(COMP_ADDR);
@@ -132,14 +138,15 @@ describe('CompoundMultiple', function () {
         expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(totalAmount);
     });
 
-    it.only('enter, exit manually', async function () {
+    it('enter, exit manually', async function () {
+        const owner = nextAccount();
+
         const initialAmount = fromUsd(1000000);
         const minAmount = fromUsd(10000);
 
-        const compoundMultiple = await CompoundMultiple.new(manager, { from: owner });
+        const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
 
         const usdcToken = await ERC20.at(USDC_ADDR);
-        const compToken = await ERC20.at(COMP_ADDR);
         const cusdcToken = await CERC20.at(CUSDC_ADDR);
         const cusdcTokenERC20 = await ERC20.at(CUSDC_ADDR);
 
