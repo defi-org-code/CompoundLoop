@@ -90,12 +90,12 @@ contract CompoundMultiple is Ownable, Exponential {
         return IERC20(ComptrollerInterface(UNITROLLER).getCompAddress()).balanceOf(address(this));
     }
     
-    function getAccountLiquidity(address account)
+    function getAccountLiquidity()
         public
         view
         returns (uint accountLiquidity, uint accountShortfall)
     {
-        (, uint accountLiquidity, uint accountShortfall) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
+        (, accountLiquidity, accountShortfall) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
     }        
 
     function mantissaToUSDC(uint amountMantissa) 
