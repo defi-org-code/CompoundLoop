@@ -213,17 +213,17 @@ contract CompoundMultiple is Ownable, Exponential {
         emit LogRedeemUnderlying(CUSDC, address(this), tokenAmount);
     }
 
-    function repayBorrow(uint tokenAmount)
+    function repayBorrow()
         external
         onlyManagerOrOwner
     {
-        uint amountToRepayFirst = IERC20(CErc20Interface(CUSDC).underlying()).balanceOf(address(this));
+        uint contractUSDCBalance = IERC20(CErc20Interface(CUSDC).underlying()).balanceOf(address(this));
         uint borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));   
-        if (tokenAmount.add(amountToRepayFirst) > borrowBalance) {
+        if (contractUSDCBalance > borrowBalance) {
             require(CErc20Interface(CUSDC).repayBorrow(uint(-1)) == 0, "approve first");
             emit LogRepay(CUSDC, address(this), uint(-1));
         } else {
-            require(CErc20Interface(CUSDC).repayBorrow(tokenAmount.add(amountToRepayFirst)) == 0, "approve first");
+            require(CErc20Interface(CUSDC).repayBorrow(contractUSDCBalance) == 0, "approve first");
             emit LogRepay(CUSDC, address(this), tokenAmount.add(amountToRepayFirst));
         }
     }
@@ -305,7 +305,7 @@ contract CompoundMultiple is Ownable, Exponential {
             }
             amountToRepayFirst = 0;
             borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
-            currentIteration = currentIteration +1;
+            currentIteration = currentIteration + 1;
         }
 
         if (borrowBalance == 0) {
