@@ -1,4 +1,4 @@
-const { accounts, contract } = require('@openzeppelin/test-environment');
+const { accounts, contract, web3 } = require('@openzeppelin/test-environment');
 const { BN, time } = require('@openzeppelin/test-helpers');
 
 const { expect } = require('chai');
@@ -20,6 +20,8 @@ const toComp = x => new BN(x).div(new BN(10).pow(new BN(18)));
 
 let curAccount = 0;
 const nextAccount = () => accounts[curAccount++];
+
+const { getBalance } = require("../src/balance");
 
 describe('CompoundMultiple', function () {
 
@@ -196,5 +198,4 @@ describe('CompoundMultiple', function () {
         console.log(`owner USDC balance after withdraw: ${toUsd(usdcBalanceAfterWithdraw)} USDC`);
         expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(initialAmount);
     });
-
 });
