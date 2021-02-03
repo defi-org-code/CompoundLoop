@@ -19,11 +19,21 @@ Recommended to use [Remix](https://remix.ethereum.org/) to deploy the contract u
 
 ## Roles
 
-Owner can withdraw funds and manager and enter/exit the position in Compound. For simplicity, can leave both roles as the deployer Trezor account.
+*Owner* can withdraw funds and *manager* can enter/exit the position in Compound. For simplicity, can leave both roles as the deployer Trezor account since handling the contract can be manual (no bot needed).
 
 ## Management
 
 Recommended to take the ABI created during test/deployment and upload it as private [custom ABI](https://info.etherscan.com/custom-abi/) to Etherscan and this way we can easily use Etherscan read/write interface without publishing the contract source.
+
+## Gas
+
+Exiting with $1M inside takes 5.5M gas, existing with $5M inside takes 7.5M gas.
+
+## Monitoring
+
+Call `getAccountLiquidity` to see that the liquidity is not dropping to zero (approaching liquidation). The liquidity should usually increase over time since combined interest rate should be positive.
+
+*Review: might need to improve this to a state updating function since this may not take into account changes over time*
 
 ## Emergencies
 
