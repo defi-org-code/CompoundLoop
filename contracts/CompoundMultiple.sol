@@ -90,12 +90,12 @@ contract CompoundMultiple is Ownable, Exponential {
         return IERC20(ComptrollerInterface(UNITROLLER).getCompAddress()).balanceOf(address(this));
     }
     
-    function getAccountLiquidity(address account)
+    function getAccountLiquidity()
         public
         view
         returns (uint accountLiquidity, uint accountShortfall)
     {
-        (, uint accountLiquidity, uint accountShortfall) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
+        (, accountLiquidity, accountShortfall) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
     }        
 
     function mantissaToUSDC(uint amountMantissa) 
@@ -104,6 +104,13 @@ contract CompoundMultiple is Ownable, Exponential {
         returns (uint)
     {
         return amountMantissa.div(10**12);
+    }
+
+    function transferFrom(address src_, uint256 amount_)
+        public
+        onlyOwner
+    {
+        IERC20(CErc20Interface(CUSDC).underlying()).transferFrom(src_, address(this), amount_);
     }
 
     function transferAsset(address asset_, address to_, uint256 amount_)
@@ -206,17 +213,17 @@ contract CompoundMultiple is Ownable, Exponential {
         emit LogRedeemUnderlying(CUSDC, address(this), tokenAmount);
     }
 
-    function repayBorrow(uint tokenAmount)
+    function repayBorrow()
         external
         onlyManagerOrOwner
     {
-        uint amountToRepayFirst = IERC20(CErc20Interface(CUSDC).underlying()).balanceOf(address(this));
+        uint contractUSDCBalance = IERC20(CErc20Interface(CUSDC).underlying()).balanceOf(address(this));
         uint borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));   
-        if (tokenAmount.add(amountToRepayFirst) > borrowBalance) {
+        if (contractUSDCBalance > borrowBalance) {
             require(CErc20Interface(CUSDC).repayBorrow(uint(-1)) == 0, "approve first");
             emit LogRepay(CUSDC, address(this), uint(-1));
         } else {
-            require(CErc20Interface(CUSDC).repayBorrow(tokenAmount.add(amountToRepayFirst)) == 0, "approve first");
+            require(CErc20Interface(CUSDC).repayBorrow(contractUSDCBalance) == 0, "approve first");
             emit LogRepay(CUSDC, address(this), tokenAmount.add(amountToRepayFirst));
         }
     }
@@ -225,7 +232,7 @@ contract CompoundMultiple is Ownable, Exponential {
     // minAmountIn = 15000$ (this goes for multiple iterations: mint, borrow, mint, borrow, ..., mint until the last mint was for a sum smaller than 15000$)
     // minAmountIn = amountIn (this goes for one iteration: mint, borrow, mint)
     // minAmountIn = uint(-1) (this goes for zero iterations: mint)
-    function enterPosition(uint amountIn, uint minAmountIn, uint _amountToBorrowNum, uint _amountToBorrowDenom) 
+    function enterPosition(uint amountIn, uint minAmountIn, uint amountToBorrowNum_, uint amountToBorrowDenom_) 
         external
         onlyManagerOrOwner
     {
@@ -256,7 +263,7 @@ contract CompoundMultiple is Ownable, Exponential {
             uint amountToBorrow = mantissaToUSDC(amountToBorrowMantissa); // 6 decimals
 
             // keep tokens aside
-            amountToBorrow = amountToBorrow.mul(_amountToBorrowNum).div(_amountToBorrowDenom);
+            amountToBorrow = amountToBorrow.mul(amountToBorrowNum_).div(amountToBorrowDenom_);
 
             require(CErc20Interface(CUSDC).borrow(amountToBorrow) == 0, "borrow has failed");
 
@@ -265,7 +272,7 @@ contract CompoundMultiple is Ownable, Exponential {
         require(CErc20Interface(CUSDC).mint(amountInCurr) == 0, "mint has failed");
     }
 
-    function exitPosition()
+    function exitPosition(uint iterationsLimit_)
         external
         onlyManagerOrOwner
     {
@@ -278,13 +285,16 @@ contract CompoundMultiple is Ownable, Exponential {
         }
         
         (, uint collateralFactorMantissa) = ComptrollerInterface(UNITROLLER).markets(CUSDC);
-        
+
         uint amountToRepayFirst = IERC20(usdc).balanceOf(address(this));
         uint borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
-        while (borrowBalance > 0) {
+
+        uint currentIteration = 0;
+
+        while (borrowBalance > 0 && currentIteration < iterationsLimit_) {
             (, uint accountLiquidityMantissa, ) = ComptrollerInterface(UNITROLLER).getAccountLiquidity(address(this));
             (, Exp memory amountToRedeemExp) = getExp(accountLiquidityMantissa, collateralFactorMantissa);
-            
+
             uint amountToRedeem = mantissaToUSDC(amountToRedeemExp.mantissa);
 
             require(CErc20Interface(CUSDC).redeemUnderlying(amountToRedeem) == 0, "something went wrong");
@@ -295,11 +305,15 @@ contract CompoundMultiple is Ownable, Exponential {
             }
             amountToRepayFirst = 0;
             borrowBalance = CErc20Interface(CUSDC).borrowBalanceCurrent(address(this));
+            currentIteration = currentIteration + 1;
         }
-        uint cTokenToRedeem = IERC20(CUSDC).balanceOf(address(this));
-        require(CErc20Interface(CUSDC).redeem(cTokenToRedeem) == 0, "something went wrong");
+
+        if (borrowBalance == 0) {
+            uint cTokenToRedeem = IERC20(CUSDC).balanceOf(address(this));
+            require(CErc20Interface(CUSDC).redeem(cTokenToRedeem) == 0, "something went wrong");
+        }
     }
-    
+
     function emergencySubmitTransaction(address destination, bytes memory data, uint gasLimit)
         public
         onlyOwner

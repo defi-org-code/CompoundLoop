@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "truffle compile && mocha --exit --recursive --timeout 200000"
+    "test": "truffle compile && mocha --exit --recursive --timeout 200000",
+    "balance": "node ./balance-bot"
   },
   "repository": {
     "type": "git",
