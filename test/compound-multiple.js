@@ -17,6 +17,7 @@ const fromUsd = x => new BN(x).mul(new BN(1000000));
 const toUsd = x => new BN(x).div(new BN(1000000));
 
 const toComp = x => new BN(x).div(new BN(10).pow(new BN(18)));
+const fromComp = x => new BN(x).mul(new BN(10).pow(new BN(18)));
 
 let curAccount = 0;
 const nextAccount = () => accounts[curAccount++];
@@ -26,7 +27,7 @@ describe('CompoundMultiple', function () {
     it('enter, exit, claim', async function () {
         const owner = nextAccount();
 
-        const initialAmount = fromUsd(1000000);
+        const initialAmount = fromUsd(5000000);
         const minAmount = fromUsd(10000);
 
         const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
@@ -38,25 +39,30 @@ describe('CompoundMultiple', function () {
 
         await usdcToken.transfer(compoundMultiple.address, initialAmount, {from: USDC_HOLDER});
 
-        let res = await compoundMultiple.enterPosition(initialAmount, minAmount, 99, 100, {from: owner});
-        expect(parseInt(res.receipt.gasUsed)).to.be.lt(6000000);
+        let res = await compoundMultiple.enterPosition(initialAmount, minAmount, 93, 100, {from: owner});
         console.log(`enter position: gas used - ${res.receipt.gasUsed}`);
+        expect(parseInt(res.receipt.gasUsed)).to.be.lt(8000000);
 
         expect(await usdcToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
 
         const borrowBalance = await cusdcToken.borrowBalanceStored(compoundMultiple.address);
         console.log(`contract borrow balance after entering: ${toUsd(borrowBalance)}`);
-        expect(new BN(borrowBalance)).to.be.bignumber.gt(fromUsd(2976136));
-        expect(new BN(borrowBalance)).to.be.bignumber.lt(fromUsd(2976137));
+        expect(new BN(borrowBalance)).to.be.bignumber.gt(fromUsd(14970000));
+        expect(new BN(borrowBalance)).to.be.bignumber.lt(fromUsd(14980000));
 
-        await time.increase(7*24*60*60);
+        const avgBlockTime = 13
+        const blocks = 5;
+
+        for (let i = 0; i < blocks; i++) {
+            await time.advanceBlock();
+        }
 
         await compoundMultiple.claimAndTransferAllComp(owner, {from: owner});
         expect(await compToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
 
         const compBalance = await compToken.balanceOf(owner);
-        console.log(`owner COMP balance after claim: ${compBalance} COMP*1e18`);
-        expect(compBalance).to.bignumber.gte(new BN(400000000000000));
+        console.log(`owner COMP balance after claim: ${compBalance} COMP*1e18, ${toComp(compBalance.mul(new BN(60 * 60 * 24).div(new BN(blocks * avgBlockTime))))} COMP/day`);
+        expect(compBalance).to.bignumber.gte("12000000000000000");
 
         res = await compoundMultiple.exitPosition({from: owner});
         console.log(`exit position: gas used - ${res.receipt.gasUsed}`);
@@ -88,7 +94,6 @@ describe('CompoundMultiple', function () {
         const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
 
         const usdcToken = await ERC20.at(USDC_ADDR);
-        const compToken = await ERC20.at(COMP_ADDR);
         const cusdcToken = await CERC20.at(CUSDC_ADDR);
         const cusdcTokenERC20 = await ERC20.at(CUSDC_ADDR);
 
@@ -118,7 +123,10 @@ describe('CompoundMultiple', function () {
         expect(new BN(borrowBalance)).to.be.bignumber.gt(fromUsd(3033109));
         expect(new BN(borrowBalance)).to.be.bignumber.lt(fromUsd(3043110));
 
-        await time.increase(7*24*60*60);
+        const blocks = 5;
+        for (let i = 0; i < blocks; i++) {
+            await time.advanceBlock();
+        }
 
         res = await compoundMultiple.exitPosition({from: owner});
         console.log(`exit position: gas used - ${res.receipt.gasUsed}`);
@@ -163,7 +171,10 @@ describe('CompoundMultiple', function () {
         expect(new BN(borrowBalance)).to.be.bignumber.gt(fromUsd(2976136));
         expect(new BN(borrowBalance)).to.be.bignumber.lt(fromUsd(2976137));
 
-        await time.increase(7*24*60*60);
+        const blocks = 5;
+        for (let i = 0; i < blocks; i++) {
+            await time.advanceBlock();
+        }
 
         // exit manually here
         await compoundMultiple.setApproval({from: owner});

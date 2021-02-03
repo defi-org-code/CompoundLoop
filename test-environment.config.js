@@ -6,7 +6,7 @@ module.exports = {
 
     contracts: {
         type: 'truffle', // Contract abstraction to use: 'truffle' for @truffle/contract or 'web3' for web3-eth-contract
-        defaultGas: 6e6, // Maximum gas for contract calls (when unspecified)
+        defaultGas: 9e6, // Maximum gas for contract calls (when unspecified)
 
         // Options available since v0.1.2
         defaultGasPrice: 20e9, // Gas price for contract calls (when unspecified)
@@ -14,8 +14,8 @@ module.exports = {
     },
 
     node: { // Options passed directly to Ganache client
-        gasLimit: 8e6, // Maximum gas per block
-        gasPrice: 20e9, // Sets the default gas price for transactions if not otherwise specified.
+        gasLimit: 12e6, // Maximum gas per block
+        gasPrice: 1e9, // Sets the default gas price for transactions if not otherwise specified.
         // Uncomment and edit to use a mainnet fork
         fork: 'https://mainnet.infura.io/v3/62f4815d28674debbe4703c5eb9d413c',
         unlocked_accounts: [
