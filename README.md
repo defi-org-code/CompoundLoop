@@ -41,6 +41,6 @@ If `exitPosition` fails, exit can be done manually:
 
 1. Using multiple manual rollback transactions, see [test #3](https://github.com/defi-org-code/CompoundLoop/issues/4).
 
-2. The owner contract can also execute an arbitrary transaction using `emergencySubmitTransaction`.
+2. The owner of the contract can also execute an arbitrary transaction using `emergencySubmitTransaction`.
 
 3. By sending more USDC to the contract before running `exitPosition` again, this will reduce the numebr of exit iterations.
