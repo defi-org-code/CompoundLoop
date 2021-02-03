@@ -33,7 +33,7 @@ Exiting with $1M inside takes 5.5M gas, existing with $5M inside takes 7.5M gas.
 
 Call `getAccountLiquidity` to see that the liquidity is not dropping to zero (approaching liquidation). The liquidity should usually increase over time since combined interest rate should be positive.
 
-*Review: this function is not 100% accurate since does not take into account accrued interest for recent blocks*
+*Note: this function is not 100% accurate since does not take into account accrued interest for recent blocks*
 
 A better alternative, which does take into account accrued interest up to the latest block, is using the script `src/balance.js` which calls `CompoundLens.cTokenBalances`.
 
