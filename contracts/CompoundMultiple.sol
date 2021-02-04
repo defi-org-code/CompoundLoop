@@ -71,7 +71,7 @@ contract CompoundMultiple is Ownable, Exponential {
     event LogRepay(address _token, address _owner, uint256 tokenAmount);
 
     modifier onlyManagerOrOwner() {
-        require(msg.sender == manager || msg.sender == owner(), "Caller is not manager or owner");
+        require(msg.sender == manager || msg.sender == owner() || (msg.sender == address(this) && (tx.origin == owner() || tx.origin == manager)), "Caller is not manager or owner");
         _;
     }
 
