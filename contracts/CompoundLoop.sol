@@ -80,6 +80,18 @@ contract CompoundLoop is Ownable, Exponential {
         Comptroller(UNITROLLER).claimComp(holders, cTokens, borrowers, suppliers);
     }
 
+    function getAccountLiquidityWithInterest()
+        public
+        returns (
+            uint256 err,
+            uint256 accountLiquidity,
+            uint256 accountShortfall
+        )
+    {
+        require(CERC20(CUSDC).accrueInterest() == 0, "getAccountLiquidityWithInterest failed");
+        return Comptroller(UNITROLLER).getAccountLiquidity(address(this));
+    }
+
     // --- main ---
 
     // 3 typical cases:

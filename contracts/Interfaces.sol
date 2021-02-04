@@ -48,4 +48,6 @@ interface CERC20 is IERC20 {
     function borrowBalanceStored(address account) external view returns (uint256);
 
     function underlying() external view returns (address);
+
+    function accrueInterest() external returns (uint256);
 }
