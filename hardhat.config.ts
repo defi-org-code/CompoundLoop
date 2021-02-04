@@ -1,8 +1,9 @@
 import "@nomiclabs/hardhat-web3";
 import "hardhat-typechain";
+import "hardhat-gas-reporter";
 import { HardhatRuntimeEnvironment, HardhatUserConfig } from "hardhat/types";
 import { task } from "hardhat/config";
-import { ethAlchemyRpcUrl, ethChainId, ethInfuraRpcUrl } from "./src/consts";
+import { coinmarketkapKey, ethAlchemyRpcUrl, ethChainId, ethInfuraRpcUrl, unitrollerAddress } from "./src/consts";
 import { getBalance } from "./src/balance";
 
 task("status", "check status").setAction(async (_, hre: HardhatRuntimeEnvironment) => {
@@ -11,15 +12,39 @@ task("status", "check status").setAction(async (_, hre: HardhatRuntimeEnvironmen
   console.log(b);
 });
 
+interface RemoteContract {
+  abi: any;
+  address: string;
+  name: string;
+  bytecode?: string;
+  bytecodeHash?: string;
+  deployedBytecode?: string;
+}
+const remoteContracts: RemoteContract[] = [
+  // {
+  //   name: "Comptroller",
+  //   address: unitrollerAddress,
+  //   abi: require("./abi/ComptrollerAbi.json"),
+  // },
+];
+
 const config: HardhatUserConfig = {
-  solidity: "0.7.4",
+  solidity: {
+    version: "0.7.4",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      blockGasLimit: 52e6,
+      blockGasLimit: 12e6,
       forking: {
         url: ethAlchemyRpcUrl,
-        blockNumber: 11786000,
+        blockNumber: 11790000,
       },
     },
     eth: {
@@ -36,7 +61,13 @@ const config: HardhatUserConfig = {
     target: "web3-v1",
   },
   mocha: {
-    timeout: 60000,
+    timeout: 240_000,
+  },
+  gasReporter: {
+    currency: "USD",
+    coinmarketcap: coinmarketkapKey,
+    showTimeSpent: true,
+    remoteContracts,
   },
 };
 export default config;

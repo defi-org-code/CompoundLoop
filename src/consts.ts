@@ -7,6 +7,8 @@ export const ethAlchemyRpcUrl = "https://eth-mainnet.alchemyapi.io/v2/" + config
 export const etherscanApiBaseUrl = "https://api.etherscan.io/api";
 export const etherscanKey = config().etherscanKey;
 
+export const coinmarketkapKey = config().coinmarketcapKey;
+
 export const USDCAddress = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
 export const unitrollerAddress = "0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B";
 export const CUSDCAddress = "0x39AA39c021dfbaE8faC545936693aC917d5E7563";

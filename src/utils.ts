@@ -9,7 +9,7 @@ export function eth(n: number | string) {
   return bn(n).muln(1e18);
 }
 
-export function usd(n: number | string) {
+export function to1e6(n: number | string) {
   return bn(n).muln(1e6);
 }
 
