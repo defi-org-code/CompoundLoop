@@ -41,12 +41,16 @@ contract CompoundLoop is Ownable, Exponential {
     }
 
     function underlyingBalance() public view returns (uint256) {
-        address underlying = CERC20(CUSDC).underlying();
-        return IERC20(underlying).balanceOf(address(this));
+        address usdc = CERC20(CUSDC).underlying();
+        return IERC20(usdc).balanceOf(address(this));
     }
 
     function compBalance() public view returns (uint256) {
         return IERC20(Comptroller(UNITROLLER).getCompAddress()).balanceOf(address(this));
+    }
+
+    function borrowBalance() public view returns (uint256) {
+        return CERC20(CUSDC).borrowBalanceCurrent(address(this));
     }
 
     function getAccountLiquidity()
@@ -79,98 +83,80 @@ contract CompoundLoop is Ownable, Exponential {
     // --- main ---
 
     // 3 typical cases:
-    // minAmountIn = amountIn (this goes for one iteration: mint, borrow, mint)
-    // minAmountIn < amountIn (this goes for multiple iterations: mint, borrow, mint, borrow, ..., mint until the last mint was for a sum smaller than minAmountIn)
+    // minAmountIn = account balance (this goes for one iteration: mint, borrow, mint)
+    // minAmountIn < account balance (this goes for multiple iterations: mint, borrow, mint, borrow, ..., mint until the last mint was for a sum smaller than minAmountIn)
     // minAmountIn = uint(-1) (this goes for zero iterations: mint)
     function enterPosition(
-        uint256 amountIn,
         uint256 minAmountIn,
         uint256 borrowRatioNum,
         uint256 borrowRatioDenom
     ) external onlyManagerOrOwner {
         (bool isListed, ) = Comptroller(UNITROLLER).markets(CUSDC);
         require(isListed, "cToken not listed");
-        address usdc = CERC20(CUSDC).underlying();
-        // approve token for mint
-        if (IERC20(usdc).allowance(address(this), CUSDC) != uint256(-1)) {
-            IERC20(usdc).approve(CUSDC, uint256(-1));
-        }
 
-        // enable cToken as collateral
-        address[] memory arrayForEnterMarkets = new address[](1);
-        arrayForEnterMarkets[0] = CUSDC;
-        Comptroller(UNITROLLER).enterMarkets(arrayForEnterMarkets);
-
-        require(IERC20(usdc).balanceOf(address(this)) >= amountIn, "not enough tokens");
-        uint256 _amountIn = amountIn;
-        if (_amountIn == 0) {
-            _amountIn = IERC20(usdc).balanceOf(address(this));
-        }
+        setApprove();
+        enterMarkets();
 
         uint256 amountToBorrowMantissa;
-        uint256 amountInCurr = _amountIn;
-        while (amountInCurr >= minAmountIn) {
-            require(CERC20(CUSDC).mint(amountInCurr) == 0, "mint has failed");
-            (, amountToBorrowMantissa, ) = Comptroller(UNITROLLER).getAccountLiquidity(address(this)); // 18 decimals
-            uint256 amountToBorrow = mantissaToUSDC(amountToBorrowMantissa); // 6 decimals
+        uint256 usdcBalance = underlyingBalance();
+        require(usdcBalance > 0, "not enough USDC balance");
 
-            // keep tokens aside
+        while (usdcBalance >= minAmountIn) {
+            require(CERC20(CUSDC).mint(usdcBalance) == 0, "mint failed");
+
+            (err, liquidity, shortfall) = getAccountLiquidity(); // 18 decimals
+            require(err == 0, "getAccountLiquidity error");
+            require(shortfall == 0, "shortfall");
+
+            uint256 amountToBorrow = eighteenToUSDC(liquidity); // 6 decimals
+            // adjust borrow to ratio
             amountToBorrow = amountToBorrow.mul(borrowRatioNum).div(borrowRatioDenom);
 
-            require(CERC20(CUSDC).borrow(amountToBorrow) == 0, "borrow has failed");
+            require(CERC20(CUSDC).borrow(amountToBorrow) == 0, "borrow failed");
 
-            amountInCurr = IERC20(usdc).balanceOf(address(this));
+            usdcBalance = underlyingBalance();
         }
-        require(CERC20(CUSDC).mint(amountInCurr) == 0, "mint has failed");
+
+        require(CERC20(CUSDC).mint(usdcBalance) == 0, "last mint failed");
     }
 
+    // maxIterations control the loop
     function exitPosition(
-        uint256 iterationsLimit,
+        uint256 maxIterations,
         uint256 redeemRatioNum,
         uint256 redeemRatioDenom
     ) external onlyManagerOrOwner {
-        require(IERC20(CUSDC).balanceOf(address(this)) > 0, "cUSDC balance = 0");
+        require(cTokenBalance() > 0, "cUSDC balance = 0");
 
-        address usdc = CERC20(CUSDC).underlying();
-        // approve USDC for repayBorrow
-        if (IERC20(usdc).allowance(address(this), CUSDC) != uint256(-1)) {
-            IERC20(usdc).approve(CUSDC, uint256(-1));
+        setApprove();
+
+        (, collateralFactor) = Comptroller(UNITROLLER).markets(CUSDC);
+
+        for (uint256 i = 0; borrowBalance() > 0 && i < maxIterations; i++) {
+            (err, liquidity, shortfall) = getAccountLiquidity(); // 18 decimals
+            require(err == 0, "getAccountLiquidity error");
+            require(shortfall == 0, "shortfall");
+
+            // inverse amount to redeem by collateralFactor (borrowed => redeemable)
+            (, Exp memory amountToRedeemExp) = getExp(liquidity, collateralFactor);
+            uint256 amountToRedeem = eighteenToUSDC(amountToRedeemExp.mantissa);
+            // adjust redeem to ratio
+            amountToRedeem = amountToRedeem.mul(redeemRatioNum).div(redeemRatioDenom); // 6 decimals
+
+            require(CERC20(CUSDC).redeemUnderlying(amountToRedeem) == 0, "redeemUnderlying failed");
+
+            repayBorrowAll();
         }
 
-        (, uint256 collateralFactorMantissa) = Comptroller(UNITROLLER).markets(CUSDC);
-
-        uint256 amountToRepayFirst = IERC20(usdc).balanceOf(address(this));
-        uint256 borrowBalance = CERC20(CUSDC).borrowBalanceCurrent(address(this));
-
-        uint256 currentIteration = 0;
-
-        while (borrowBalance > 0 && currentIteration < iterationsLimit) {
-            (, uint256 accountLiquidityMantissa, ) = Comptroller(UNITROLLER).getAccountLiquidity(address(this));
-            (, Exp memory amountToRedeemExp) = getExp(accountLiquidityMantissa, collateralFactorMantissa);
-            uint256 amountToRedeem = mantissaToUSDC(amountToRedeemExp.mantissa);
-            amountToRedeem = amountToRedeem.mul(redeemRatioNum).div(redeemRatioDenom);
-
-            require(CERC20(CUSDC).redeemUnderlying(amountToRedeem) == 0, "something went wrong");
-            if (amountToRedeem.add(amountToRepayFirst) > borrowBalance) {
-                require(CERC20(CUSDC).repayBorrow(uint256(-1)) == 0, "approved first");
-            } else {
-                require(CERC20(CUSDC).repayBorrow(amountToRedeem.add(amountToRepayFirst)) == 0, "approved first");
-            }
-            amountToRepayFirst = 0;
-            borrowBalance = CERC20(CUSDC).borrowBalanceCurrent(address(this));
-            currentIteration = currentIteration + 1;
-        }
-
-        if (borrowBalance == 0) {
-            uint256 cTokenToRedeem = IERC20(CUSDC).balanceOf(address(this));
-            require(CERC20(CUSDC).redeem(cTokenToRedeem) == 0, "something went wrong");
+        if (borrowBalance() == 0) {
+            require(CERC20(CUSDC).redeem(cTokenBalance()) == 0, "final redeem failed");
         }
     }
 
     // --- internal ---
 
-    function mantissaToUSDC(uint256 amountMantissa) internal pure returns (uint256) {
-        return amountMantissa.div(10**12);
+    function eighteenToUSDC(uint256 amount18Decimals) internal pure returns (uint256) {
+        return amount18Decimals.div(10**12);
     }
 
     // --- withdraw assets by owner ---
@@ -210,7 +196,7 @@ contract CompoundLoop is Ownable, Exponential {
         manager = _newManager;
     }
 
-    function approve() public onlyManagerOrOwner {
+    function setApprove() public onlyManagerOrOwner {
         address usdc = CERC20(CUSDC).underlying();
         if (IERC20(usdc).allowance(address(this), CUSDC) != uint256(-1)) {
             IERC20(usdc).approve(CUSDC, uint256(-1));
@@ -223,40 +209,40 @@ contract CompoundLoop is Ownable, Exponential {
         Comptroller(UNITROLLER).enterMarkets(arrayForEnterMarkets);
     }
 
-    function mintCToken(uint256 tokenAmount) external onlyManagerOrOwner {
-        require(CERC20(CUSDC).mint(tokenAmount) == 0, "mint has failed");
-        emit LogMint(CUSDC, address(this), tokenAmount);
+    function mintCToken(uint256 amount) external onlyManagerOrOwner {
+        require(CERC20(CUSDC).mint(amount) == 0, "mint has failed");
+        emit LogMint(CUSDC, address(this), amount);
     }
 
-    function borrow(uint256 tokenAmount) external onlyManagerOrOwner {
-        require(CERC20(CUSDC).borrow(tokenAmount) == 0, "borrow has failed");
-        emit LogBorrow(CUSDC, address(this), tokenAmount);
+    function borrow(uint256 amount) external onlyManagerOrOwner {
+        require(CERC20(CUSDC).borrow(amount) == 0, "borrow has failed");
+        emit LogBorrow(CUSDC, address(this), amount);
     }
 
-    function redeemCToken(uint256 tokenAmount) external onlyManagerOrOwner {
-        require(CERC20(CUSDC).redeem(tokenAmount) == 0, "something went wrong");
-        emit LogRedeem(CUSDC, address(this), tokenAmount);
+    function redeemCToken(uint256 amount) external onlyManagerOrOwner {
+        require(CERC20(CUSDC).redeem(amount) == 0, "redeem failed");
+        emit LogRedeem(CUSDC, address(this), amount);
     }
 
-    function redeemUnderlying(uint256 tokenAmount) external onlyManagerOrOwner {
-        require(CERC20(CUSDC).redeemUnderlying(tokenAmount) == 0, "something went wrong");
-        emit LogRedeemUnderlying(CUSDC, address(this), tokenAmount);
+    function redeemUnderlying(uint256 amount) external onlyManagerOrOwner {
+        require(CERC20(CUSDC).redeemUnderlying(amount) == 0, "redeemUnderlying failed");
+        emit LogRedeemUnderlying(CUSDC, address(this), amount);
     }
 
-    function repayBorrowRaw(uint256 amount) external onlyManagerOrOwner {
-        require(CERC20(CUSDC).repayBorrow(amount) == 0, "approve first");
+    function repayBorrow(uint256 amount) external onlyManagerOrOwner {
+        require(CERC20(CUSDC).repayBorrow(amount) == 0, "repayBorrow failed");
         emit LogRepay(CUSDC, address(this), amount);
     }
 
-    function repayBorrow() external onlyManagerOrOwner {
-        uint256 contractUSDCBalance = IERC20(CERC20(CUSDC).underlying()).balanceOf(address(this));
-        uint256 borrowBalance = CERC20(CUSDC).borrowBalanceCurrent(address(this));
-        if (contractUSDCBalance > borrowBalance) {
-            require(CERC20(CUSDC).repayBorrow(uint256(-1)) == 0, "approve first");
+    function repayBorrowAll() public onlyManagerOrOwner {
+        uint256 usdcBalance = underlyingBalance();
+        uint256 borrowBalance = borrowBalance();
+        if (usdcBalance > borrowBalance) {
+            require(CERC20(CUSDC).repayBorrow(uint256(-1)) == 0, "repayBorrow -1 failed");
             emit LogRepay(CUSDC, address(this), uint256(-1));
         } else {
-            require(CERC20(CUSDC).repayBorrow(contractUSDCBalance) == 0, "approve first");
-            emit LogRepay(CUSDC, address(this), contractUSDCBalance);
+            require(CERC20(CUSDC).repayBorrow(usdcBalance) == 0, "repayBorrow failed");
+            emit LogRepay(CUSDC, address(this), usdcBalance);
         }
     }
 
