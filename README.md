@@ -1,4 +1,4 @@
-# CompoundLoop
+# CompoundMultiple
 
 ## What is this
 
@@ -35,7 +35,7 @@ Call `getAccountLiquidity` to see that the liquidity is not dropping to zero (ap
 
 *Note: this function is not 100% accurate since does not take into account accrued interest for recent blocks*
 
-A better alternative, which does take into account accrued interest up to the latest block, is using the script `src/balance.js` which calls `CompoundLens.cTokenBalances`.
+A better alternative, which does take into account accrued interest up to the latest block, is using the script `src/balance.ts` which calls `CompoundLens.cTokenBalances`.
 
 ## Emergencies
 
