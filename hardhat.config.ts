@@ -1,6 +1,6 @@
-import { HardhatRuntimeEnvironment, HardhatUserConfig } from "hardhat/types";
-import "hardhat-typechain";
 import "@nomiclabs/hardhat-web3";
+import "hardhat-typechain";
+import { HardhatRuntimeEnvironment, HardhatUserConfig } from "hardhat/types";
 import { task } from "hardhat/config";
 import { ethAlchemyRpcUrl, ethChainId, ethInfuraRpcUrl } from "./src/consts";
 import { getBalance } from "./src/balance";
@@ -16,6 +16,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
+      blockGasLimit: 52e6,
       forking: {
         url: ethAlchemyRpcUrl,
         blockNumber: 11786000,
