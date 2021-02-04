@@ -10,7 +10,7 @@ declare global {
 }
 
 import { bn, cerc20, compiledContract, erc20, evmIncreaseTime, hre, impersonate, to1e6 } from "../src/utils";
-import { CompoundMultiple } from "../typechain-hardhat/CompoundMultiple";
+import { CompoundLoop } from "../typechain-hardhat/CompoundLoop";
 import { compTokenAddress, CUSDCAddress, USDCAddress } from "../src/consts";
 
 const USDC_HOLDER = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8";
@@ -22,7 +22,7 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(1000000);
     const minAmount = to1e6(10000);
 
-    const compoundMultiple = await compiledContract<CompoundMultiple>("CompoundMultiple", owner, owner);
+    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
     const contractAddress = compoundMultiple.options.address;
 
     const usdcToken = await erc20(USDCAddress);
@@ -63,7 +63,7 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(5_000_000);
     const minAmount = to1e6(50_000);
 
-    const compoundMultiple = await compiledContract<CompoundMultiple>("CompoundMultiple", owner, owner);
+    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
     expect(await compoundMultiple.methods.CUSDC().call()).eq(CUSDCAddress);
 
     const usdcToken = await erc20(USDCAddress);
@@ -129,7 +129,7 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    const compoundMultiple = await compiledContract<CompoundMultiple>("CompoundMultiple", owner, owner);
+    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
     const contractAddress = compoundMultiple.options.address;
     await impersonate(USDC_HOLDER);
     await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
@@ -186,7 +186,7 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(1000000);
     const minAmount = to1e6(10000);
 
-    const compoundMultiple = await compiledContract<CompoundMultiple>("CompoundMultiple", owner, owner);
+    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
     expect(await compoundMultiple.methods.CUSDC().call()).eq(CUSDCAddress);
 
     const usdcToken = await erc20(USDCAddress);
