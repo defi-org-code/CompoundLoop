@@ -54,8 +54,8 @@ contract CompoundMultiple is Ownable, Exponential {
         view
         returns (
             uint256 err,
-            uint256 accountLiquidity,
-            uint256 accountShortfall
+            uint256 liquidity,
+            uint256 shortfall
         )
     {
         return Comptroller(UNITROLLER).getAccountLiquidity(address(this));

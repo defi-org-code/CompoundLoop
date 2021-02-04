@@ -1,7 +1,7 @@
 import Web3 from "web3";
 // import { CompoundLensAbi } from "../typechain/CompoundLensAbi";
 import { contract } from "./utils";
-import { compoundLensAddress, cUSDCAddress } from "./consts";
+import { compoundLensAddress, CUSDCAddress } from "./consts";
 
 // const lensAbi = require("../abi/CompoundLensAbi.json");
 
