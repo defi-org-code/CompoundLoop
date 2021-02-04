@@ -12,7 +12,7 @@ task("status", "check status").setAction(async (_, hre: HardhatRuntimeEnvironmen
 });
 
 const config: HardhatUserConfig = {
-  solidity: "0.7.3",
+  solidity: "0.7.4",
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
