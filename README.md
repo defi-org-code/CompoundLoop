@@ -1,4 +1,4 @@
-# CompoundLoop
+# CompoundMultiple
 
 ## What is this
 
