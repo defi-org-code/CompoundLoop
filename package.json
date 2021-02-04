@@ -15,6 +15,7 @@
     "chai": "^4.2.0",
     "chai-bn": "^0.2.1",
     "hardhat": "^2.0.8",
+    "hardhat-gas-reporter": "^1.0.4",
     "hardhat-typechain": "^0.3.4",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
@@ -35,6 +36,7 @@
     "typechain": "typechain --target=web3-v1 --outDir=typechain 'abi/**/*.json'",
     "clean": "rm -rf ./typechain ./typechain-hardhat && npm run typechain && npx hardhat clean",
     "build": "npm run clean && npm run prettier && npx hardhat compile && npx solhint 'contracts/**/*.sol'",
+    "pretest": "npm run build",
     "test": "npx hardhat test",
     "status": "npx hardhat status"
   }
