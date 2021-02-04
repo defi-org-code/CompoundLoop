@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "./Exponential.sol";
 import "./Interfaces.sol";
 
-contract CompoundMultiple is Ownable, Exponential {
+contract CompoundLoop is Ownable, Exponential {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
