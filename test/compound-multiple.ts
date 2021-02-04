@@ -16,6 +16,47 @@ import { compTokenAddress, CUSDCAddress, USDCAddress } from "../src/consts";
 const USDC_HOLDER = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8";
 
 describe("CompoundLoop", async () => {
+  it("emergencySubmitTransaction:: withdraw usdc from contract", async function () {
+    const owner = (await hre().web3.eth.getAccounts())[3];
+
+    const initialAmount = to1e6(1000000);
+    const minAmount = to1e6(10000);
+
+    const compoundMultiple = await compiledContract<CompoundMultiple>("CompoundMultiple", owner, owner);
+    const contractAddress = compoundMultiple.options.address;
+
+    const usdcToken = await erc20(USDCAddress);
+    const compToken = await erc20(compTokenAddress);
+    const cusdcToken = await cerc20(CUSDCAddress);
+
+    await impersonate(USDC_HOLDER);
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+
+    expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(initialAmount);
+    expect(await usdcToken.methods.balanceOf(owner).call()).to.be.bignumber.eq(new BN(0));
+    let gasLimit = new BN(8000000);
+    let data = hre().web3.eth.abi.encodeFunctionCall(
+      {
+        name: "transfer",
+        type: "function",
+        inputs: [
+          {
+            type: "address",
+            name: "recipient",
+          },
+          {
+            type: "uint256",
+            name: "amount",
+          },
+        ],
+      },
+      [owner, initialAmount.toString()]
+    );
+    await compoundMultiple.methods.emergencySubmitTransaction(USDCAddress, data, gasLimit.toString()).send({ from: owner });
+    expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
+    expect(await usdcToken.methods.balanceOf(owner).call()).to.be.bignumber.eq(initialAmount);
+  });
+
   it("enter, exit, claim", async () => {
     const owner = (await hre().web3.eth.getAccounts())[0];
 
