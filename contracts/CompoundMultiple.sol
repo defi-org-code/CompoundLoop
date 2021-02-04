@@ -14,6 +14,8 @@ contract CompoundMultiple is Ownable, Exponential {
     // --- fields ---
     address public constant UNITROLLER = address(0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B);
     address public constant CUSDC = address(0x39AA39c021dfbaE8faC545936693aC917d5E7563);
+    address public constant USDC = address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
+    address public constant COMP = address(0xc00e94Cb662C3520282E6f5717214004A7f26888);
     address public manager;
 
     // --- events ---
@@ -41,12 +43,11 @@ contract CompoundMultiple is Ownable, Exponential {
     }
 
     function underlyingBalance() public view returns (uint256) {
-        address usdc = CERC20(CUSDC).underlying();
-        return IERC20(usdc).balanceOf(address(this));
+        return IERC20(USDC).balanceOf(address(this));
     }
 
     function compBalance() public view returns (uint256) {
-        return IERC20(Comptroller(UNITROLLER).getCompAddress()).balanceOf(address(this));
+        return IERC20(COMP).balanceOf(address(this));
     }
 
     function getAccountLiquidity()
@@ -63,7 +64,7 @@ contract CompoundMultiple is Ownable, Exponential {
 
     // --- unrestricted actions ---
 
-    function borrowBalance() public returns (uint256) {
+    function borrowBalanceCurrent() public returns (uint256) {
         return CERC20(CUSDC).borrowBalanceCurrent(address(this));
     }
 
@@ -120,7 +121,6 @@ contract CompoundMultiple is Ownable, Exponential {
             require(shortfall == 0, "shortfall");
 
             uint256 amountToBorrow = eighteenToUSDC(liquidity); // 6 decimals
-            // adjust borrow to ratio
             amountToBorrow = amountToBorrow.mul(borrowRatioNum).div(borrowRatioDenom);
 
             borrow(amountToBorrow);
@@ -143,23 +143,31 @@ contract CompoundMultiple is Ownable, Exponential {
 
         (, uint256 collateralFactor) = Comptroller(UNITROLLER).markets(CUSDC);
 
-        for (uint256 i = 0; borrowBalance() > 0 && i < maxIterations; i++) {
+        uint256 _borrowBalance = borrowBalanceCurrent();
+
+        for (uint256 i = 0; _borrowBalance > 0 && i < maxIterations; i++) {
             (uint256 err, uint256 liquidity, uint256 shortfall) = getAccountLiquidity(); // 18 decimals
             require(err == 0, "getAccountLiquidity error");
             require(shortfall == 0, "shortfall");
 
-            // inverse amount to redeem by collateralFactor (borrowed => redeemable)
+            // getAmountToRedeem from liquidity and collateralFactor
             (, Exp memory amountToRedeemExp) = getExp(liquidity, collateralFactor);
             uint256 amountToRedeem = eighteenToUSDC(amountToRedeemExp.mantissa);
-            // adjust redeem to ratio
             amountToRedeem = amountToRedeem.mul(redeemRatioNum).div(redeemRatioDenom); // 6 decimals
 
             redeemUnderlying(amountToRedeem);
 
-            repayBorrowAll();
+            uint256 usdcBalance = underlyingBalance();
+            if (usdcBalance > _borrowBalance) {
+                require(CERC20(CUSDC).repayBorrow(uint256(-1)) == 0, "repayBorrow -1 failed");
+            } else {
+                require(CERC20(CUSDC).repayBorrow(usdcBalance) == 0, "repayBorrow failed");
+            }
+
+            _borrowBalance = CERC20(CUSDC).borrowBalanceStored(address(this));
         }
 
-        if (borrowBalance() == 0) {
+        if (_borrowBalance == 0) {
             redeemCToken(cTokenBalance());
         }
     }
@@ -174,13 +182,13 @@ contract CompoundMultiple is Ownable, Exponential {
 
     function claimAndTransferAllComp(address to_) public onlyOwner {
         claimComp();
-        IERC20 compToken = IERC20(Comptroller(UNITROLLER).getCompAddress());
+        IERC20 compToken = IERC20(COMP);
         uint256 balance = compToken.balanceOf(address(this));
         compToken.safeTransfer(to_, balance);
     }
 
     function transferFrom(address src_, uint256 amount_) public onlyOwner {
-        IERC20(CERC20(CUSDC).underlying()).transferFrom(src_, address(this), amount_);
+        IERC20(USDC).transferFrom(src_, address(this), amount_);
     }
 
     function transferAsset(
@@ -208,9 +216,8 @@ contract CompoundMultiple is Ownable, Exponential {
     }
 
     function setApprove() public onlyManagerOrOwner {
-        address usdc = CERC20(CUSDC).underlying();
-        if (IERC20(usdc).allowance(address(this), CUSDC) != uint256(-1)) {
-            IERC20(usdc).approve(CUSDC, uint256(-1));
+        if (IERC20(USDC).allowance(address(this), CUSDC) != uint256(-1)) {
+            IERC20(USDC).approve(CUSDC, uint256(-1));
         }
     }
 
@@ -247,7 +254,7 @@ contract CompoundMultiple is Ownable, Exponential {
 
     function repayBorrowAll() public onlyManagerOrOwner {
         uint256 usdcBalance = underlyingBalance();
-        if (usdcBalance > borrowBalance()) {
+        if (usdcBalance > borrowBalanceCurrent()) {
             require(CERC20(CUSDC).repayBorrow(uint256(-1)) == 0, "repayBorrow -1 failed");
             emit LogRepay(CUSDC, address(this), uint256(-1));
         } else {
