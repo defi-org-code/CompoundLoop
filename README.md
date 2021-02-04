@@ -21,7 +21,7 @@ It's recommended to use [Remix](https://remix.ethereum.org/) to deploy the contr
 2. Fix OpenZepplin imports in all files by replacing `@openzeppelin` with `https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.3.0`
 3. Under *Solidity Compiler* tab:
     * Set `Enable optimization: 200` 
-    * Click `Compile CompoundMultiple.sol` 
+    * Click `Compile CompoundLoop.sol` 
     * After compilation, copy its ABI by clicking `ABI` below
   
 4. Under *Deploy & run transactions* tab: 
