@@ -25,7 +25,8 @@ const nextAccount = () => accounts[curAccount++];
 const { getBalance } = require("../src/balance");
 
 describe("CompoundMultiple", function () {
-  it('emergencySubmitTransaction', async function () {
+
+  it('emergencySubmitTransaction:: withdraw usdc from contract', async function () {
     const owner = nextAccount();
 
     const initialAmount = fromUsd(1000000);
@@ -56,14 +57,114 @@ describe("CompoundMultiple", function () {
     await compoundMultiple.emergencySubmitTransaction(usdcToken.address, data, gasLimit, {from: owner});
     expect(await usdcToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
     expect(await usdcToken.balanceOf(owner)).to.be.bignumber.eq(initialAmount);
-
-    let res = await usdcToken.balanceOf(owner);
-    console.log(res.toString());
-    res = await usdcToken.balanceOf(compoundMultiple.address);
-    console.log(res.toString());
   });
 
-  it("enter, exit, claim", async function () {
+  it("emergencySubmitTransaction:: enter, exit manually", async function () {
+    const owner = nextAccount();
+    const initialAmount = fromUsd(1000000);
+    const minAmount = fromUsd(10000);
+
+    const compoundMultiple = await CompoundMultiple.new(owner, { from: owner });
+
+    const usdcToken = await ERC20.at(USDC_ADDR);
+    const cusdcToken = await CERC20.at(CUSDC_ADDR);
+    const cusdcTokenERC20 = await ERC20.at(CUSDC_ADDR);
+
+    await usdcToken.transfer(compoundMultiple.address, initialAmount, { from: USDC_HOLDER });
+
+    let res = await compoundMultiple.enterPosition(initialAmount, minAmount, 99, 100, { from: owner });
+    expect(parseInt(res.receipt.gasUsed)).to.be.lt(6000000);
+    console.log(`enter position: gas used - ${res.receipt.gasUsed}`);
+
+    expect(await usdcToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
+
+    let borrowBalance = await cusdcToken.borrowBalanceStored(compoundMultiple.address);
+    console.log(`contract borrow balance after initial entering: ${toUsd(borrowBalance)}`);
+    expect(new BN(borrowBalance)).to.be.bignumber.gt(fromUsd(2976136));
+    expect(new BN(borrowBalance)).to.be.bignumber.lt(fromUsd(2976137));
+
+    const blocks = 5;
+    for (let i = 0; i < blocks; i++) {
+      await time.advanceBlock();
+    }
+
+    // exit manually here
+    await compoundMultiple.setApproval({ from: owner });
+    let redeemAmount = new BN(5000000000);
+    let callData ='';
+    const gasLimit = new BN(8500000);
+
+    while (true) {
+      redeemAmount = redeemAmount.mul(new BN(5)).div(new BN(4));
+
+      const borrowBalance = new BN(await cusdcToken.borrowBalanceStored(compoundMultiple.address));
+      if (borrowBalance.eq(new BN(0))) {
+        break;
+      }
+
+      callData = web3.eth.abi.encodeFunctionCall({
+        name: 'redeemUnderlying',
+        type: 'function',
+        inputs: [{
+          type: 'uint256',
+          name: 'tokenAmount'
+        }]
+      },[redeemAmount.toString()]);
+      await compoundMultiple.emergencySubmitTransaction(compoundMultiple.address, callData, gasLimit, {from: owner});
+
+      const usdcBalance = await usdcToken.balanceOf(compoundMultiple.address);
+      console.log(`borrow balance: ${borrowBalance} usdc balance: ${usdcBalance} redeemAmount: ${redeemAmount}`);
+
+      callData = web3.eth.abi.encodeFunctionCall({
+        name: 'repayBorrow',
+        type: 'function',
+        inputs: [],
+      },[]);
+      await compoundMultiple.emergencySubmitTransaction(compoundMultiple.address, callData, gasLimit, {from: owner});
+    }
+
+    let redeemCAmount = new BN(await cusdcTokenERC20.balanceOf(compoundMultiple.address));
+    callData = web3.eth.abi.encodeFunctionCall({
+      name: 'redeemCToken',
+      type: 'function',
+      inputs: [{
+        type: 'uint256',
+        name: 'tokenAmount'
+      }]
+    },[redeemCAmount.toString()]);
+    await compoundMultiple.emergencySubmitTransaction(compoundMultiple.address, callData, gasLimit, {from: owner});
+    expect(new BN(await cusdcTokenERC20.balanceOf(compoundMultiple.address))).to.bignumber.eq(new BN(0));
+
+    const usdcBalanceAfterExit = await usdcToken.balanceOf(compoundMultiple.address);
+    console.log(`contract USDC balance after exit: ${toUsd(usdcBalanceAfterExit)} USDC`);
+    expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
+
+    // requires lowering owner restrictions
+    // callData = web3.eth.abi.encodeFunctionCall({
+    //   name: 'transferAsset',
+    //   type: 'function',
+    //   inputs: [{
+    //     type: 'address',
+    //     name: 'asset_'
+    //   },{
+    //     type: 'address',
+    //     name: 'to_'
+    //   },{
+    //     type: 'uint256',
+    //     name: 'amount_'
+    //   }]
+    // },[usdcToken.address, owner, usdcBalanceAfterExit.toString()]);
+    // await compoundMultiple.emergencySubmitTransaction(compoundMultiple.address, callData, gasLimit, {from: owner});
+
+    await compoundMultiple.transferAsset(usdcToken.address, owner, usdcBalanceAfterExit, { from: owner });
+    expect(await usdcToken.balanceOf(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
+
+    let usdcBalanceAfterWithdraw = await usdcToken.balanceOf(owner);
+    console.log(`owner USDC balance after withdraw: ${toUsd(usdcBalanceAfterWithdraw)} USDC`);
+    expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(initialAmount);
+  });
+
+  it.skip("enter, exit, claim", async function () {
     const owner = nextAccount();
 
     const initialAmount = fromUsd(5000000);
@@ -125,7 +226,7 @@ describe("CompoundMultiple", function () {
     expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(initialAmount);
   });
 
-  it("enter, enter again with small amount, exit", async function () {
+  it.skip("enter, enter again with small amount, exit", async function () {
     const owner = nextAccount();
 
     const initialAmount = fromUsd(1000000);
@@ -171,7 +272,7 @@ describe("CompoundMultiple", function () {
       await time.advanceBlock();
     }
 
-    res = await compoundMultiple.exitPosition({ from: owner });
+    res = await compoundMultiple.exitPosition(0,{ from: owner });
     console.log(`exit position: gas used - ${res.receipt.gasUsed}`);
 
     expect(await cusdcToken.borrowBalanceStored(compoundMultiple.address)).to.be.bignumber.eq(new BN(0));
@@ -189,7 +290,7 @@ describe("CompoundMultiple", function () {
     expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(totalAmount);
   });
 
-  it("enter, exit manually", async function () {
+  it.skip("enter, exit manually", async function () {
     const owner = nextAccount();
 
     const initialAmount = fromUsd(1000000);
@@ -233,7 +334,7 @@ describe("CompoundMultiple", function () {
       await compoundMultiple.redeemUnderlying(redeemAmount, { from: owner });
       const usdcBalance = await usdcToken.balanceOf(compoundMultiple.address);
       console.log(`borrow balance: ${borrowBalance} usdc balance: ${usdcBalance} redeemAmount: ${redeemAmount}`);
-      await compoundMultiple.repayBorrow(0, { from: owner });
+      await compoundMultiple.repayBorrow( { from: owner });
     }
 
     await compoundMultiple.redeemCToken(new BN(await cusdcTokenERC20.balanceOf(compoundMultiple.address)), { from: owner });
