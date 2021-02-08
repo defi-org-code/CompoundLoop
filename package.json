@@ -1,5 +1,5 @@
 {
-  "name": "compound-multiple",
+  "name": "compound-loop",
   "version": "1.0.0",
   "license": "UNLICENSED",
   "repository": {
@@ -13,7 +13,6 @@
     "@types/lodash": "^4.14.168",
     "@types/mocha": "^8.2.0",
     "chai": "^4.2.0",
-    "chai-bn": "^0.2.1",
     "hardhat": "^2.0.8",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-typechain": "^0.3.4",
@@ -27,13 +26,13 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^3.3.0",
-    "web3": "^1.3.4",
+    "bn.js": "^5.1.3",
     "lodash": "^4.17.20",
-    "bn.js": "^5.1.3"
+    "web3": "^1.3.4"
   },
   "scripts": {
     "prettier": "prettier --write '{test,src,contracts,scripts}/**/*.{ts,js,json,sol}'",
-    "typechain": "typechain --target=web3-v1 --outDir=typechain 'abi/**/*.json'",
+    "typechain": "typechain --target=web3-v1 --outDir=typechain 'abi/**/*.json' && npx hardhat typechain",
     "clean": "rm -rf ./typechain ./typechain-hardhat && npm run typechain && npx hardhat clean",
     "build": "npm run clean && npm run prettier && npx hardhat compile && npx solhint 'contracts/**/*.sol'",
     "pretest": "npm run build",
