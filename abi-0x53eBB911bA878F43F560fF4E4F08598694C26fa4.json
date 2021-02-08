@@ -1,0 +1,48 @@
+[
+  {
+    "inputs": [],
+    "name": "getAccountLiquidity",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "err",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "liquidity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "shortfall",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAccountLiquidityWithInterest",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "err",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "accountLiquidity",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "accountShortfall",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]
