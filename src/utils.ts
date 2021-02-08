@@ -1,5 +1,6 @@
 import { IERC20 } from "../typechain-hardhat/IERC20";
 import { CERC20 } from "../typechain-hardhat/CERC20";
+import BN from "bn.js";
 
 export function bn(n: number | string) {
   return hre().web3.utils.toBN(n);
@@ -11,6 +12,10 @@ export function eth(n: number | string) {
 
 export function to1e6(n: number | string) {
   return bn(n).muln(1e6);
+}
+
+export function fmt(bn: string | BN) {
+  return hre().web3.utils.fromWei(bn, "ether");
 }
 
 export function hre() {
@@ -68,4 +73,19 @@ export async function evmIncreaseTime(seconds: number) {
     method: "evm_increaseTime",
     params: [seconds],
   });
+}
+
+export async function keepTrying<T>(fn: () => Promise<T>): Promise<T> {
+  do {
+    try {
+      return await fn();
+    } catch (e) {
+      console.error(e);
+      await sleep(1);
+    }
+  } while (true);
+}
+
+export async function sleep(seconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
 }

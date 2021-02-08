@@ -22,8 +22,8 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(1000000);
     const minAmount = to1e6(10000);
 
-    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
-    const contractAddress = compoundMultiple.options.address;
+    const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+    const contractAddress = compoundLoop.options.address;
 
     const usdcToken = await erc20(USDCAddress);
     const compToken = await erc20(compTokenAddress);
@@ -52,7 +52,7 @@ describe("CompoundLoop", async () => {
       },
       [owner, initialAmount.toString()]
     );
-    await compoundMultiple.methods.emergencySubmitTransaction(USDCAddress, data, gasLimit.toString()).send({ from: owner });
+    await compoundLoop.methods.emergencySubmitTransaction(USDCAddress, data, gasLimit.toString()).send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
     expect(await usdcToken.methods.balanceOf(owner).call()).to.be.bignumber.eq(initialAmount);
   });
@@ -63,18 +63,18 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(5_000_000);
     const minAmount = to1e6(50_000);
 
-    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
-    expect(await compoundMultiple.methods.CUSDC().call()).eq(CUSDCAddress);
+    const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+    expect(await compoundLoop.methods.CUSDC().call()).eq(CUSDCAddress);
 
     const usdcToken = await erc20(USDCAddress);
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
     await impersonate(USDC_HOLDER);
-    const contractAddress = compoundMultiple.options.address;
+    const contractAddress = compoundLoop.options.address;
     await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
 
-    let res = await compoundMultiple.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
+    let res = await compoundLoop.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
     console.log(`enter position: gas used - ${res.gasUsed}`);
     expect(res.gasUsed).to.be.lt(8000000);
 
@@ -87,7 +87,7 @@ describe("CompoundLoop", async () => {
     const avgBlockTime = 13;
     await evmIncreaseTime(blocks * avgBlockTime);
 
-    await compoundMultiple.methods.claimAndTransferAllComp(owner).send({ from: owner });
+    await compoundLoop.methods.claimAndTransferAllComp(owner).send({ from: owner });
     expect(await compToken.methods.balanceOf(contractAddress).call()).to.bignumber.eq("0");
 
     const compBalance = bn(await compToken.methods.balanceOf(owner).call());
@@ -97,7 +97,7 @@ describe("CompoundLoop", async () => {
 
     expect(compPerDay).to.bignumber.gte(bn("12000000000000000"));
 
-    res = await compoundMultiple.methods.exitPosition(100, 1, 1).send({ from: owner, gas: 10e6 });
+    res = await compoundLoop.methods.exitPosition(100, 1, 1).send({ from: owner, gas: 10e6 });
     console.log(`exit position: gas used - ${res.gasUsed}`);
 
     const borrowedBalance = await cusdcToken.methods.borrowBalanceStored(contractAddress).call({ from: owner });
@@ -108,7 +108,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundMultiple.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -129,12 +129,12 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
-    const contractAddress = compoundMultiple.options.address;
+    const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+    const contractAddress = compoundLoop.options.address;
     await impersonate(USDC_HOLDER);
     await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
 
-    let res = await compoundMultiple.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
+    let res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
     console.log(`enter position (initial): gas used - ${res.gasUsed}`);
 
@@ -147,7 +147,7 @@ describe("CompoundLoop", async () => {
 
     await usdcToken.methods.transfer(contractAddress, secondAmount).send({ from: USDC_HOLDER });
 
-    res = await compoundMultiple.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
+    res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
     console.log(`enter position (second): gas used - ${res.gasUsed}`);
 
@@ -162,7 +162,7 @@ describe("CompoundLoop", async () => {
     const avgBlockTime = 13;
     await evmIncreaseTime(blocks * avgBlockTime);
 
-    res = await compoundMultiple.methods.exitPosition(100, 1, 1).send({ from: owner });
+    res = await compoundLoop.methods.exitPosition(100, 1, 1).send({ from: owner });
     console.log(`exit position: gas used - ${res.gasUsed}`);
 
     expect(await cusdcToken.methods.borrowBalanceStored(contractAddress).call()).to.be.bignumber.eq(new BN(0));
@@ -172,7 +172,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(totalAmount);
 
-    await compoundMultiple.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -186,18 +186,18 @@ describe("CompoundLoop", async () => {
     const initialAmount = to1e6(1000000);
     const minAmount = to1e6(10000);
 
-    const compoundMultiple = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
-    expect(await compoundMultiple.methods.CUSDC().call()).eq(CUSDCAddress);
+    const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+    expect(await compoundLoop.methods.CUSDC().call()).eq(CUSDCAddress);
 
     const usdcToken = await erc20(USDCAddress);
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
     await impersonate(USDC_HOLDER);
-    const contractAddress = compoundMultiple.options.address;
+    const contractAddress = compoundLoop.options.address;
     await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
 
-    let res = await compoundMultiple.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
+    let res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
     console.log(`enter position: gas used - ${res.gasUsed}`);
 
@@ -209,7 +209,7 @@ describe("CompoundLoop", async () => {
     expect(new BN(borrowBalance)).to.be.bignumber.lt(to1e6(2976137));
 
     // exit manually here
-    await compoundMultiple.methods.setApprove().send({ from: owner });
+    await compoundLoop.methods.setApprove().send({ from: owner });
     let redeemAmount = new BN(5_000_000_000);
     while (true) {
       redeemAmount = redeemAmount.muln(5).divn(4);
@@ -219,14 +219,14 @@ describe("CompoundLoop", async () => {
         break;
       }
 
-      await compoundMultiple.methods.redeemUnderlying(redeemAmount.toString()).send({ from: owner });
+      await compoundLoop.methods.redeemUnderlying(redeemAmount.toString()).send({ from: owner });
       const usdcBalance = await usdcToken.methods.balanceOf(contractAddress).call();
       console.log(`borrow balance: ${borrowBalance} usdc balance: ${usdcBalance} redeemAmount: ${redeemAmount}`);
-      await compoundMultiple.methods.repayBorrowAll().send({ from: owner });
+      await compoundLoop.methods.repayBorrowAll().send({ from: owner });
     }
 
     let usdcBalance = await cusdcToken.methods.balanceOf(contractAddress).call();
-    await compoundMultiple.methods.redeemCToken(usdcBalance).send({
+    await compoundLoop.methods.redeemCToken(usdcBalance).send({
       from: owner,
     });
     usdcBalance = await cusdcToken.methods.balanceOf(contractAddress).call();
@@ -236,11 +236,42 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundMultiple.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
     console.log(`owner USDC balance after withdraw: ${to1e6(usdcBalanceAfterWithdraw)} USDC`);
     expect(usdcBalanceAfterWithdraw).to.be.bignumber.gte(initialAmount);
+  });
+
+  it("account liquidity", async () => {
+    const owner = (await hre().web3.eth.getAccounts())[4];
+
+    const initialAmount = to1e6(5_000_000);
+    const minAmount = to1e6(50_000);
+
+    const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+    expect(await compoundLoop.methods.CUSDC().call()).eq(CUSDCAddress);
+
+    const usdcToken = await erc20(USDCAddress);
+    const compToken = await erc20(compTokenAddress);
+    const cusdcToken = await cerc20(CUSDCAddress);
+
+    await impersonate(USDC_HOLDER);
+    const contractAddress = compoundLoop.options.address;
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+
+    let res = await compoundLoop.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
+    console.log(`enter position: gas used - ${res.gasUsed}`);
+    const liquidity1 = await compoundLoop.methods.getAccountLiquidityWithInterest().call({ from: owner });
+    console.log(liquidity1);
+
+    const blocks = 5;
+    const avgBlockTime = 13;
+    await evmIncreaseTime(blocks * avgBlockTime);
+    const liquidity2 = await compoundLoop.methods.getAccountLiquidityWithInterest().call({ from: owner });
+    console.log(liquidity2);
+
+    expect(liquidity2.accountLiquidity).to.bignumber.lt(bn(liquidity1.accountLiquidity));
   });
 });

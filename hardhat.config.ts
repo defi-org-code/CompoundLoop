@@ -1,32 +1,16 @@
 import "@nomiclabs/hardhat-web3";
 import "hardhat-typechain";
 import "hardhat-gas-reporter";
-import { HardhatRuntimeEnvironment, HardhatUserConfig } from "hardhat/types";
+import { HardhatUserConfig } from "hardhat/types";
 import { task } from "hardhat/config";
-import { coinmarketkapKey, ethAlchemyRpcUrl, ethChainId, ethInfuraRpcUrl, unitrollerAddress } from "./src/consts";
-import { getBalance } from "./src/balance";
+import { coinmarketcapKey, ethAlchemyRpcUrl, ethChainId, ethInfuraRpcUrl } from "./src/consts";
+import { printCurrentLiquidity, printClaimableComp, printHistoricalLiquidity } from "./src/balance";
 
-task("status", "check status").setAction(async (_, hre: HardhatRuntimeEnvironment) => {
-  const [owner] = await hre.web3.eth.getAccounts(); //TODO change to deployed contract address
-  const b = await getBalance(hre.web3, owner);
-  console.log(b);
+task("status", "check status").setAction(async () => {
+  await printClaimableComp();
+  await printCurrentLiquidity();
+  await printHistoricalLiquidity(12);
 });
-
-interface RemoteContract {
-  abi: any;
-  address: string;
-  name: string;
-  bytecode?: string;
-  bytecodeHash?: string;
-  deployedBytecode?: string;
-}
-const remoteContracts: RemoteContract[] = [
-  // {
-  //   name: "Comptroller",
-  //   address: unitrollerAddress,
-  //   abi: require("./abi/ComptrollerAbi.json"),
-  // },
-];
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -44,7 +28,6 @@ const config: HardhatUserConfig = {
       blockGasLimit: 12e6,
       forking: {
         url: ethAlchemyRpcUrl,
-        blockNumber: 11790000,
       },
     },
     eth: {
@@ -65,9 +48,8 @@ const config: HardhatUserConfig = {
   },
   gasReporter: {
     currency: "USD",
-    coinmarketcap: coinmarketkapKey,
+    coinmarketcap: coinmarketcapKey,
     showTimeSpent: true,
-    remoteContracts,
   },
 };
 export default config;
