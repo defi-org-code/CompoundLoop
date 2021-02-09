@@ -108,7 +108,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
+    await compoundLoop.methods.safeTransferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -172,7 +172,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(totalAmount);
 
-    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
+    await compoundLoop.methods.safeTransferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -236,7 +236,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
+    await compoundLoop.methods.safeTransferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
