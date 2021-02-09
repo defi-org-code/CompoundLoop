@@ -87,7 +87,7 @@ describe("CompoundLoop", async () => {
     const avgBlockTime = 13;
     await evmIncreaseTime(blocks * avgBlockTime);
 
-    await compoundLoop.methods.claimAndTransferAllComp(owner).send({ from: owner });
+    await compoundLoop.methods.claimAndTransferAllCompToOwner().send({ from: owner });
     expect(await compToken.methods.balanceOf(contractAddress).call()).to.bignumber.eq("0");
 
     const compBalance = bn(await compToken.methods.balanceOf(owner).call());
@@ -108,7 +108,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -172,7 +172,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(totalAmount);
 
-    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();
@@ -236,7 +236,7 @@ describe("CompoundLoop", async () => {
     console.log(`contract USDC balance after exit: ${to1e6(usdcBalanceAfterExit)} USDC`);
     expect(usdcBalanceAfterExit).to.be.bignumber.gte(initialAmount);
 
-    await compoundLoop.methods.transferAsset(USDCAddress, owner, usdcBalanceAfterExit).send({ from: owner });
+    await compoundLoop.methods.transferUSDCToOwner().send({ from: owner });
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(new BN(0));
 
     let usdcBalanceAfterWithdraw = await usdcToken.methods.balanceOf(owner).call();

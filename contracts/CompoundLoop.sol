@@ -46,10 +46,6 @@ contract CompoundLoop is Ownable, Exponential {
         return IERC20(USDC).balanceOf(address(this));
     }
 
-    function compBalance() public view returns (uint256) {
-        return IERC20(COMP).balanceOf(address(this));
-    }
-
     function getAccountLiquidity()
         public
         view
@@ -68,8 +64,9 @@ contract CompoundLoop is Ownable, Exponential {
         return CERC20(CUSDC).borrowBalanceCurrent(address(this));
     }
 
-    function claimComp() public {
+    function claimComp() public returns (uint256) {
         Comptroller(UNITROLLER).claimComp(address(this));
+        return IERC20(COMP).balanceOf(address(this));
     }
 
     function claimComp(
@@ -136,7 +133,7 @@ contract CompoundLoop is Ownable, Exponential {
         uint256 maxIterations,
         uint256 redeemRatioNum,
         uint256 redeemRatioDenom
-    ) external onlyManagerOrOwner {
+    ) external onlyManagerOrOwner returns (uint256) {
         require(cTokenBalance() > 0, "cUSDC balance = 0");
 
         setApprove();
@@ -170,6 +167,8 @@ contract CompoundLoop is Ownable, Exponential {
         if (_borrowBalance == 0) {
             redeemCToken(cTokenBalance());
         }
+
+        return underlyingBalance();
     }
 
     // --- internal ---
@@ -180,31 +179,18 @@ contract CompoundLoop is Ownable, Exponential {
 
     // --- withdraw assets by owner ---
 
-    function claimAndTransferAllComp(address to_) public onlyOwner {
-        claimComp();
-        IERC20 compToken = IERC20(COMP);
-        uint256 balance = compToken.balanceOf(address(this));
-        compToken.safeTransfer(to_, balance);
+    function claimAndTransferAllCompToOwner() public onlyOwner {
+        uint256 balance = claimComp();
+        if (balance > 0) {
+            IERC20(COMP).safeTransfer(owner(), balance);
+        }
     }
 
-    function transferFrom(address src_, uint256 amount_) public onlyOwner {
-        IERC20(USDC).transferFrom(src_, address(this), amount_);
-    }
-
-    function transferAsset(
-        address asset_,
-        address to_,
-        uint256 amount_
-    ) public onlyOwner {
-        IERC20(asset_).transfer(to_, amount_);
-    }
-
-    function safeTransferAsset(
-        address asset_,
-        address to_,
-        uint256 amount_
-    ) public onlyOwner {
-        IERC20(asset_).safeTransfer(to_, amount_);
+    function transferUSDCToOwner() public onlyOwner {
+        uint256 usdcBalance = IERC20(USDC).balanceOf(address(this));
+        if (usdcBalance > 0) {
+            IERC20(USDC).safeTransfer(owner(), usdcBalance);
+        }
     }
 
     // --- administration ---
@@ -264,6 +250,26 @@ contract CompoundLoop is Ownable, Exponential {
     }
 
     // --- emergency ---
+
+    function emergencyTransferFrom(address src_, uint256 amount_) public onlyOwner {
+        IERC20(USDC).transferFrom(src_, address(this), amount_);
+    }
+
+    function emergencyTransferAsset(
+        address asset_,
+        address to_,
+        uint256 amount_
+    ) public onlyOwner {
+        IERC20(asset_).transfer(to_, amount_);
+    }
+
+    function emergencySafeTransferAsset(
+        address asset_,
+        address to_,
+        uint256 amount_
+    ) public onlyOwner {
+        IERC20(asset_).safeTransfer(to_, amount_);
+    }
 
     function emergencyTransferAll(address[] memory tokens_, address to_) public onlyOwner {
         uint256 ercLen = tokens_.length;
