@@ -73,6 +73,10 @@ export async function evmIncreaseTime(seconds: number) {
     method: "evm_increaseTime",
     params: [seconds],
   });
+  await hre().network.provider.request({
+    method: "evm_mine",
+    params: [],
+  });
 }
 
 export async function keepTrying<T>(fn: () => Promise<T>): Promise<T> {

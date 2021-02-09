@@ -266,7 +266,7 @@ describe("CompoundLoop", async () => {
     const liquidity1 = await compoundLoop.methods.getAccountLiquidityWithInterest().call({ from: owner });
     console.log(liquidity1);
 
-    const blocks = 5;
+    const blocks = 50;
     const avgBlockTime = 13;
     await evmIncreaseTime(blocks * avgBlockTime);
     const liquidity2 = await compoundLoop.methods.getAccountLiquidityWithInterest().call({ from: owner });
