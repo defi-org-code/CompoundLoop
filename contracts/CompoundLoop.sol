@@ -179,7 +179,7 @@ contract CompoundLoop is Ownable, Exponential {
 
     // --- withdraw assets by owner ---
 
-    function claimAndTransferAllCompToOwner() public onlyOwner {
+    function claimAndTransferAllCompToOwner() public onlyManagerOrOwner {
         uint256 balance = claimComp();
         if (balance > 0) {
             IERC20(COMP).safeTransfer(owner(), balance);
@@ -190,6 +190,13 @@ contract CompoundLoop is Ownable, Exponential {
         uint256 usdcBalance = IERC20(USDC).balanceOf(address(this));
         if (usdcBalance > 0) {
             IERC20(USDC).safeTransfer(owner(), usdcBalance);
+        }
+    }
+
+    function transferAssetToOwner(address src) public onlyOwner {
+        uint256 balance = IERC20(src).balanceOf(address(this));
+        if (balance > 0) {
+            IERC20(src).safeTransfer(owner(), balance);
         }
     }
 
