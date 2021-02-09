@@ -186,18 +186,22 @@ contract CompoundLoop is Ownable, Exponential {
         }
     }
 
-    function transferUSDCToOwner() public onlyOwner {
-        uint256 usdcBalance = IERC20(USDC).balanceOf(address(this));
+    function safeTransferUSDCToOwner() public onlyOwner {
+        uint256 usdcBalance = underlyingBalance();
         if (usdcBalance > 0) {
             IERC20(USDC).safeTransfer(owner(), usdcBalance);
         }
     }
 
-    function transferAssetToOwner(address src) public onlyOwner {
+    function safeTransferAssetToOwner(address src) public onlyOwner {
         uint256 balance = IERC20(src).balanceOf(address(this));
         if (balance > 0) {
             IERC20(src).safeTransfer(owner(), balance);
         }
+    }
+
+    function transferFrom(address src_, uint256 amount_) public onlyOwner {
+        IERC20(USDC).transferFrom(src_, address(this), amount_);
     }
 
     // --- administration ---
@@ -257,10 +261,6 @@ contract CompoundLoop is Ownable, Exponential {
     }
 
     // --- emergency ---
-
-    function emergencyTransferFrom(address src_, uint256 amount_) public onlyOwner {
-        IERC20(USDC).transferFrom(src_, address(this), amount_);
-    }
 
     function emergencyTransferAsset(
         address asset_,
