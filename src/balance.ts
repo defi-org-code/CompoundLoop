@@ -3,8 +3,6 @@ import { CompoundLoop } from "../typechain-hardhat/CompoundLoop";
 import { compoundLensAddress, compTokenAddress, CONTRACT_ADDRESS, OWNER, unitrollerAddress } from "./consts";
 import { CompoundLensAbi } from "../typechain/CompoundLensAbi";
 
-const abi = require("../artifacts/contracts/CompoundLoop.sol/CompoundLoop.json").abi;
-
 export async function printClaimableComp() {
   const instance = contract<CompoundLensAbi>(require("../abi/CompoundLensAbi.json"), compoundLensAddress);
   const result = await instance.methods
@@ -32,13 +30,13 @@ export async function printClaimableComp() {
 }
 
 export async function printCurrentLiquidity() {
-  const instance = contract<CompoundLoop>(abi, CONTRACT_ADDRESS);
+  const instance = contract<CompoundLoop>(require("../artifacts/contracts/CompoundLoop.sol/CompoundLoop.json").abi, CONTRACT_ADDRESS);
   const result = await instance.methods.getAccountLiquidityWithInterest().call({ from: OWNER });
   console.log(await hre().web3.eth.getBlockNumber(), fmt(result.accountLiquidity));
 }
 
 export async function printHistoricalLiquidity(hours: number) {
-  const instance = contract<CompoundLoop>(abi, CONTRACT_ADDRESS);
+  const instance = contract<CompoundLoop>(require("../artifacts/contracts/CompoundLoop.sol/CompoundLoop.json").abi, CONTRACT_ADDRESS);
   const startBlock = 11792730;
   const endBlock = await hre().web3.eth.getBlockNumber();
 

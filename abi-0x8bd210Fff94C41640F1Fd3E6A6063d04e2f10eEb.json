@@ -268,7 +268,7 @@
     "inputs": [],
     "name": "claimAndTransferAllCompToOwner",
     "outputs": [],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
