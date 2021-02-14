@@ -18,6 +18,14 @@ export function fmt(bn: string | BN) {
   return hre().web3.utils.fromWei(bn, "ether");
 }
 
+export function fmt1e6(bn: string | BN) {
+  return hre().web3.utils.fromWei(bn, "lovelace");
+}
+
+export function fmt1e8(n: string | BN) {
+  return hre().web3.utils.fromWei(hre().web3.utils.toBN(n).muln(10), "szabo");
+}
+
 export function hre() {
   return require("hardhat");
 }

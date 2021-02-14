@@ -11,9 +11,7 @@ declare global {
 
 import { bn, cerc20, compiledContract, erc20, evmIncreaseTime, hre, impersonate, to1e6 } from "../src/utils";
 import { CompoundLoop } from "../typechain-hardhat/CompoundLoop";
-import { compTokenAddress, CONTRACT_ADDRESS, CUSDCAddress, USDCAddress } from "../src/consts";
-
-const USDC_HOLDER = "0xBE0eB53F46cd790Cd13851d5EFf43D12404d33E8";
+import { binanceHotWallet, compTokenAddress, CONTRACT_ADDRESS, CUSDCAddress, USDCAddress } from "../src/consts";
 
 describe("CompoundLoop", async () => {
   it("emergencySubmitTransaction:: withdraw usdc from contract", async function () {
@@ -29,8 +27,8 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    await impersonate(USDC_HOLDER);
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await impersonate(binanceHotWallet);
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     expect(await usdcToken.methods.balanceOf(contractAddress).call()).to.be.bignumber.eq(initialAmount);
     expect(await usdcToken.methods.balanceOf(owner).call()).to.be.bignumber.eq(new BN(0));
@@ -70,9 +68,9 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    await impersonate(USDC_HOLDER);
+    await impersonate(binanceHotWallet);
     const contractAddress = compoundLoop.options.address;
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     let res = await compoundLoop.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
     console.log(`enter position: gas used - ${res.gasUsed}`);
@@ -131,8 +129,8 @@ describe("CompoundLoop", async () => {
 
     const compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
     const contractAddress = compoundLoop.options.address;
-    await impersonate(USDC_HOLDER);
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await impersonate(binanceHotWallet);
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     let res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
@@ -145,7 +143,7 @@ describe("CompoundLoop", async () => {
     expect(new BN(borrowBalance)).to.be.bignumber.gt(to1e6(2976136));
     expect(new BN(borrowBalance)).to.be.bignumber.lt(to1e6(2976137));
 
-    await usdcToken.methods.transfer(contractAddress, secondAmount).send({ from: USDC_HOLDER });
+    await usdcToken.methods.transfer(contractAddress, secondAmount).send({ from: binanceHotWallet });
 
     res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
@@ -193,9 +191,9 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    await impersonate(USDC_HOLDER);
+    await impersonate(binanceHotWallet);
     const contractAddress = compoundLoop.options.address;
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     const res = await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
     expect(res.gasUsed).to.be.lt(6000000);
@@ -257,9 +255,9 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    await impersonate(USDC_HOLDER);
+    await impersonate(binanceHotWallet);
     const contractAddress = compoundLoop.options.address;
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     const res = await compoundLoop.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
     console.log(`enter position: gas used - ${res.gasUsed}`);
@@ -286,9 +284,9 @@ describe("CompoundLoop", async () => {
     const compToken = await erc20(compTokenAddress);
     const cusdcToken = await cerc20(CUSDCAddress);
 
-    await impersonate(USDC_HOLDER);
+    await impersonate(binanceHotWallet);
     const contractAddress = compoundLoop.options.address;
-    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: USDC_HOLDER });
+    await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
 
     await compoundLoop.methods.enterPosition(minAmount, 93, 100).send({ from: owner });
 

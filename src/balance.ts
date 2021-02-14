@@ -2,17 +2,17 @@ import { contract, fmt, hre, keepTrying } from "./utils";
 import { CompoundLoop } from "../typechain-hardhat/CompoundLoop";
 import { CONTRACT_ADDRESS, OWNER } from "./consts";
 
-function instance() {
+export function compoundLoop() {
   return contract<CompoundLoop>(require("../artifacts/contracts/CompoundLoop.sol/CompoundLoop.json").abi, CONTRACT_ADDRESS);
 }
 
 export async function printClaimableComp() {
-  const result = await instance().methods["claimComp()"]().call({ from: OWNER });
+  const result = await compoundLoop().methods["claimComp()"]().call({ from: OWNER });
   console.log("claimable COMP", fmt(result));
 }
 
 export async function printCurrentLiquidity() {
-  const result = await instance().methods.getAccountLiquidityWithInterest().call({ from: OWNER });
+  const result = await compoundLoop().methods.getAccountLiquidityWithInterest().call({ from: OWNER });
   console.log(await hre().web3.eth.getBlockNumber(), fmt(result.accountLiquidity));
 }
 
@@ -24,7 +24,7 @@ export async function printHistoricalLiquidity(hours: number) {
   for (let block = startBlock; block < endBlock; block += Math.round((60 * 60 * hours) / 13)) {
     console.log("checking", block);
     // @ts-ignore-next-line
-    promises.push({ block, p: instance().methods.getAccountLiquidityWithInterest().call({ from: OWNER }, block) });
+    promises.push({ block, p: compoundLoop().methods.getAccountLiquidityWithInterest().call({ from: OWNER }, block) });
   }
   const results = await Promise.all(promises.map((promise: any) => resolve(promise)));
   results.forEach((r) => {
