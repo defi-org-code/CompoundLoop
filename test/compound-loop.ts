@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-import { bn, cerc20, compiledContract, erc20, evmIncreaseTime, hre, impersonate, to1e6 } from "../src/utils";
+import { bn, cerc20, compiledContract, erc20, evmIncreaseTime, fmt, hre, impersonate, to1e6 } from "../src/utils";
 import { CompoundLoop } from "../typechain-hardhat/CompoundLoop";
 import { binanceHotWallet, compTokenAddress, CONTRACT_ADDRESS, CUSDCAddress, USDCAddress } from "../src/consts";
 
@@ -293,5 +293,38 @@ describe("CompoundLoop", async () => {
     const cTokenBalance = await compoundLoop.methods.cTokenBalance().call({ from: owner });
     const ctokenBalanceOf = await cusdcToken.methods.balanceOf(contractAddress).call();
     expect(ctokenBalanceOf).to.bignumber.eq(cTokenBalance);
+  });
+
+  describe("test in prod", () => {
+    let compoundLoop: CompoundLoop;
+    const initialAmount = to1e6(5_000_000);
+    const minAmount = to1e6(50_000);
+    let owner: string;
+
+    beforeEach(async () => {
+      owner = (await hre().web3.eth.getAccounts())[6];
+
+      compoundLoop = await compiledContract<CompoundLoop>("CompoundLoop", owner, owner);
+      const usdcToken = await erc20(USDCAddress);
+
+      await impersonate(binanceHotWallet);
+      const contractAddress = compoundLoop.options.address;
+      await usdcToken.methods.transfer(contractAddress, initialAmount).send({ from: binanceHotWallet });
+    });
+
+    it("partial exits", async () => {
+      await compoundLoop.methods.enterPosition(minAmount, 99, 100).send({ from: owner });
+
+      let prevLiquidity = bn((await compoundLoop.methods.getAccountLiquidity().call()).liquidity);
+      console.log(fmt(prevLiquidity));
+
+      for (let i = 0; i < 5; i++) {
+        await compoundLoop.methods.exitPosition(3, 99, 100).send({ from: owner });
+        expect(await compoundLoop.methods.underlyingBalance().call()).bignumber.eq("0");
+        let liquidity = bn((await compoundLoop.methods.getAccountLiquidity().call()).liquidity);
+        expect(liquidity).bignumber.gt(prevLiquidity);
+        prevLiquidity = liquidity;
+      }
+    });
   });
 });

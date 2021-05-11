@@ -31,7 +31,7 @@ export function hre() {
 }
 
 export function contract<T>(abi: any, address?: string) {
-  return (new (hre().web3.eth.Contract)(abi, address) as any) as T;
+  return new (hre().web3.eth.Contract)(abi, address) as any as T;
 }
 
 export function erc20(address?: string) {
