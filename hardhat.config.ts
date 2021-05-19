@@ -13,8 +13,8 @@ import {
   OWNER,
   USDCAddress,
 } from "./src/consts";
-import { printCurrentLiquidity, printClaimableComp, printHistoricalLiquidity, compoundLoop } from "./src/balance";
-import { erc20, eth, fmt, fmt1e6, fmt1e8, impersonate, to1e6 } from "./src/utils";
+import { compoundLoop, printClaimableComp, printCurrentLiquidity, printHistoricalLiquidity } from "./src/balance";
+import { erc20, fmt, fmt1e6, fmt1e8, impersonate, to1e6 } from "./src/utils";
 
 task("status", "check status").setAction(async () => {
   await printClaimableComp();
@@ -56,6 +56,22 @@ task("addFunds", "fork and add funds").setAction(async () => {
   console.log("endLiquidity2", fmt(endLiquidity2.accountLiquidity));
 });
 
+task("futureSim").setAction(async () => {
+  await impersonate(OWNER);
+  const instance = compoundLoop();
+
+  console.log("USDC", fmt1e6(await instance.methods.underlyingBalance().call({ from: OWNER })));
+  console.log("CToken", fmt1e8(await instance.methods.cTokenBalance().call({ from: OWNER })));
+  console.log("Liquidity", fmt((await instance.methods.getAccountLiquidityWithInterest().call({ from: OWNER })).accountLiquidity));
+
+  require("ethereumjs-hooks").jumpBlocks(1_000_000);
+  console.log("a million blocks later... (150 days) ");
+
+  console.log("USDC", fmt1e6(await instance.methods.underlyingBalance().call({ from: OWNER })));
+  console.log("CToken", fmt1e8(await instance.methods.cTokenBalance().call({ from: OWNER })));
+  console.log("Liquidity", fmt((await instance.methods.getAccountLiquidityWithInterest().call({ from: OWNER })).accountLiquidity));
+});
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.7.4",
@@ -88,7 +104,7 @@ const config: HardhatUserConfig = {
     target: "web3-v1",
   },
   mocha: {
-    timeout: 240_000,
+    timeout: 500_000,
   },
   gasReporter: {
     currency: "USD",

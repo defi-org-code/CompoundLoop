@@ -14,6 +14,7 @@
     "@types/mocha": "^8.2.0",
     "chai": "^4.2.0",
     "chai-bn": "^0.2.1",
+    "ethereumjs-hooks": "git+https://github.com/defi-org-code/ethereumjs-hooks.git",
     "hardhat": "^2.0.8",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-typechain": "^0.3.4",
@@ -36,7 +37,8 @@
     "typechain": "typechain --target=web3-v1 --outDir=typechain 'abi/**/*.json' && npx hardhat typechain",
     "build": "npm run prettier && npx hardhat compile && npx solhint 'contracts/**/*.sol'",
     "pretest": "npm run build",
-    "test": "npx hardhat test",
-    "status": "npx hardhat status"
+    "test": "npx hardhat test --logs",
+    "status": "npx hardhat status",
+    "postinstall": "ethereumjs-hooks"
   }
 }
